@@ -1,0 +1,7 @@
+{
+  "name": "Expense Tracker",
+  "description": "A modern, responsive expense tracker application that uses the Gemini API to intelligently categorize your transactions. Track income and expenses, view insightful reports, and manage your finances with ease.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
