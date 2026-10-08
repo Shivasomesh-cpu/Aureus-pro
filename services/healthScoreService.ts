@@ -33,11 +33,16 @@ export function calculateCreditScore(
     const hasRegularIncome = incomeTransactions.length >= 3;
     const paymentHistory = hasRegularIncome ? 90 : 60; // 0-100 score
 
-    // Credit Utilization (30% weight) - Debt vs available credit
+    // Credit Utilization (30% weight) - Revolving Debt vs Available Credit Line
+    const creditCardDebt = debts.filter(d => d.type === 'credit_card').reduce((sum, d) => sum + d.balance, 0);
     const totalDebt = debts.reduce((sum, d) => sum + d.balance, 0);
-    const estimatedCreditLimit = totalDebt > 0 ? totalDebt * 2 : 10000; // Assume 50% utilization
-    const utilizationRatio = totalDebt / estimatedCreditLimit;
-    const creditUtilization = Math.max(0, 100 - (utilizationRatio * 100)); // Lower is better
+    const totalIncome = incomeTransactions.reduce((s, t) => s + t.amount, 0);
+    const distinctMonths = Math.max(1, new Set(transactions.map(t => t.date.slice(0, 7))).size);
+    const monthlyIncome = totalIncome / distinctMonths;
+    const baselineLimit = Math.max(5000, monthlyIncome * 3.5);
+    const activeRevolving = creditCardDebt > 0 ? creditCardDebt : totalDebt * 0.25;
+    const utilizationRatio = Math.min(1, activeRevolving / baselineLimit);
+    const creditUtilization = Math.round(Math.max(0, (1 - utilizationRatio) * 100));
 
     // Account Age (15% weight)
     const accountAge = Math.min(100, (accountAgeMonths / 120) * 100); // Max at 10 years

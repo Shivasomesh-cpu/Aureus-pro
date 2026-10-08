@@ -77,12 +77,15 @@ export const generateDemoData = (currency: string = 'USD'): {
     debts: Debt[],
     subscriptions: Subscription[]
 } => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const currentMonth = todayStr.slice(0, 7);
     const months: string[] = [];
     for (let i = 2; i >= 0; i--) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        months.push(d.toISOString().slice(0, 7));
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const yyyy = d.getFullYear();
+        const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+        months.push(`${yyyy}-${mm}`);
     }
 
     const transactions: Transaction[] = [];
@@ -96,38 +99,47 @@ export const generateDemoData = (currency: string = 'USD'): {
         if (currency === 'USD') {
             // US often bi-weekly
             [1, 15].forEach(day => {
-                transactions.push({
-                    id: crypto.randomUUID(),
-                    type: TransactionType.INCOME,
-                    amount: profile.salary / 2,
-                    category: 'Salary',
-                    description: 'Bi-Weekly Salary Payment',
-                    date: `${month}-${day.toString().padStart(2, '0')}`,
-                    aiGenerated: true
-                });
+                const dateStr = `${month}-${day.toString().padStart(2, '0')}`;
+                if (dateStr <= todayStr) {
+                    transactions.push({
+                        id: crypto.randomUUID(),
+                        type: TransactionType.INCOME,
+                        amount: profile.salary / 2,
+                        category: 'Salary',
+                        description: 'Bi-Weekly Salary Payment',
+                        date: dateStr,
+                        aiGenerated: true
+                    });
+                }
             });
         } else {
             // Others usually monthly
+            const dateStr = `${month}-01`;
+            if (dateStr <= todayStr) {
+                transactions.push({
+                    id: crypto.randomUUID(),
+                    type: TransactionType.INCOME,
+                    amount: profile.salary,
+                    category: 'Salary',
+                    description: 'Monthly Salary',
+                    date: dateStr,
+                    aiGenerated: true
+                });
+            }
+        }
+
+        const invDate = `${month}-05`;
+        if (invDate <= todayStr) {
             transactions.push({
                 id: crypto.randomUUID(),
                 type: TransactionType.INCOME,
-                amount: profile.salary,
-                category: 'Salary',
-                description: 'Monthly Salary',
-                date: `${month}-01`,
+                amount: Math.round(profile.salary * 0.08),
+                category: 'Investment',
+                description: `${regional.banks[0]} Investment Portfolio Gains`,
+                date: invDate,
                 aiGenerated: true
             });
         }
-
-        transactions.push({
-            id: crypto.randomUUID(),
-            type: TransactionType.INCOME,
-            amount: Math.round(profile.salary * 0.08),
-            category: 'Investment',
-            description: `${regional.banks[0]} Investment Portfolio Gains`,
-            date: `${month}-05`,
-            aiGenerated: true
-        });
     });
 
     // 2. Fixed Expenses - Perfectly Spread
@@ -143,27 +155,31 @@ export const generateDemoData = (currency: string = 'USD'): {
 
     months.forEach(month => {
         fixedExpenses.forEach(exp => {
-            transactions.push({
-                id: crypto.randomUUID(),
-                type: TransactionType.EXPENSE,
-                amount: exp.amount,
-                category: exp.category,
-                description: exp.desc,
-                date: `${month}-${exp.day}`,
-                aiGenerated: true
-            });
+            const dateStr = `${month}-${exp.day}`;
+            if (dateStr <= todayStr) {
+                transactions.push({
+                    id: crypto.randomUUID(),
+                    type: TransactionType.EXPENSE,
+                    amount: exp.amount,
+                    category: exp.category,
+                    description: exp.desc,
+                    date: dateStr,
+                    aiGenerated: true
+                });
+            }
         });
     });
 
     // 3. Variable Daily/Weekly Expenses - Stable & Evenly Distributed
     const patterns = getSpendingPatterns(currency);
 
-    months.forEach((month, monthIdx) => {
+    months.forEach((month) => {
         const year = parseInt(month.split('-')[0]);
         const m = parseInt(month.split('-')[1]) - 1;
         const daysInMonth = new Date(year, m + 1, 0).getDate();
+        const maxDay = month === currentMonth ? Math.min(now.getDate(), daysInMonth) : daysInMonth;
 
-        for (let day = 1; day <= daysInMonth; day++) {
+        for (let day = 1; day <= maxDay; day++) {
             const dateStr = `${month}-${day.toString().padStart(2, '0')}`;
             const dateObj = new Date(dateStr);
             const dayOfWeek = dateObj.getDay(); // 0 = Sun, 6 = Sat
@@ -201,7 +217,7 @@ export const generateDemoData = (currency: string = 'USD'): {
             // 4. Festive Spikes
             regional.festivals.forEach(fest => {
                 const festDate = `${month}-${fest.day.toString().padStart(2, '0')}`;
-                if (dateStr === festDate && m === fest.month) {
+                if (dateStr === festDate && m === fest.month && dateStr <= todayStr) {
                     transactions.push({
                         id: crypto.randomUUID(),
                         type: TransactionType.EXPENSE,
@@ -238,14 +254,19 @@ export const generateDemoData = (currency: string = 'USD'): {
         }
     });
 
-    // Budgets
-    const budgets: Budget[] = [
-        { id: '1', category: 'Food', amount: profile.budgetFood, month: currentMonth },
-        { id: '2', category: 'Transportation', amount: profile.budgetTransport, month: currentMonth },
-        { id: '3', category: 'Entertainment', amount: profile.budgetEntertainment, month: currentMonth },
-        { id: '4', category: 'Shopping', amount: profile.budgetShopping, month: currentMonth },
-        { id: '5', category: 'Housing', amount: profile.budgetHousing, month: currentMonth },
-    ];
+    transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Budgets for all 3 seeded months
+    const budgets: Budget[] = [];
+    months.forEach((m) => {
+        budgets.push(
+            { id: `b-food-${m}`, category: 'Food', amount: profile.budgetFood, month: m },
+            { id: `b-trans-${m}`, category: 'Transportation', amount: profile.budgetTransport, month: m },
+            { id: `b-ent-${m}`, category: 'Entertainment', amount: profile.budgetEntertainment, month: m },
+            { id: `b-shop-${m}`, category: 'Shopping', amount: profile.budgetShopping, month: m },
+            { id: `b-house-${m}`, category: 'Housing', amount: profile.budgetHousing, month: m },
+        );
+    });
 
     // Savings Goals (Added Retirement for Middle-Class Realism)
     const savingsGoals: SavingsGoal[] = [

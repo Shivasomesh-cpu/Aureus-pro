@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Budget, Category } from '../types';
 import { CATEGORIES } from '../constants';
 import { TrashIcon } from './icons';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface BudgetManagerProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface BudgetManagerProps {
 }
 
 const BudgetManager: React.FC<BudgetManagerProps> = ({ isOpen, onClose, onSave, onDelete, existingBudgets }) => {
+  const { formatCurrency } = useSettings();
   const [category, setCategory] = useState<Category>('Food');
   const [amount, setAmount] = useState('');
 
@@ -96,7 +98,7 @@ const BudgetManager: React.FC<BudgetManagerProps> = ({ isOpen, onClose, onSave, 
                         <li key={budget.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
                             <span className="font-medium">{budget.category}</span>
                             <div className="flex items-center gap-4">
-                                <span className="font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(budget.amount)}</span>
+                                <span className="font-bold">{formatCurrency(budget.amount)}</span>
                                 <button onClick={() => onDelete(budget.id)} className="p-1 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400">
                                     <TrashIcon className="w-5 h-5" />
                                 </button>

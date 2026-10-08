@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Transaction, Budget, SavingsGoal, Debt, FinancialHealthScore, Category } from '../types';
 import { simulateBudgetChanges, getAdjustableCategories, BudgetAdjustment, AlchemistSimulationResult } from '../services/alchemistService';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface AlchemistWidgetProps {
     transactions: Transaction[];
@@ -23,6 +24,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 const AlchemistWidget: React.FC<AlchemistWidgetProps> = ({
     transactions, budgets, savingsGoals, debts, healthScore
 }) => {
+    const { currencySymbol, formatCurrency } = useSettings();
     const categories = useMemo(() => getAdjustableCategories(transactions), [transactions]);
     const [adjustments, setAdjustments] = useState<Record<string, number>>({});
 
@@ -48,10 +50,10 @@ const AlchemistWidget: React.FC<AlchemistWidgetProps> = ({
 
     const hasAdjustments = budgetAdjustments.length > 0;
 
-    const formatCurrency = (val: number) => {
+    const formatCurrencyDelta = (val: number) => {
         const abs = Math.abs(val);
         const sign = val < 0 ? '-' : val > 0 ? '+' : '';
-        return `${sign}${abs.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+        return `${sign}${currencySymbol}${abs.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     };
 
     return (
@@ -162,11 +164,11 @@ const AlchemistWidget: React.FC<AlchemistWidgetProps> = ({
                         <span className="text-[10px] text-gray-500 uppercase tracking-wider">Monthly Savings</span>
                         <div className="flex items-end gap-3 mt-2">
                             <span className="text-2xl font-bold text-white tabular-nums">
-                                {(hasAdjustments ? result.predictedMonthlySavings : result.currentMonthlySavings).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                {formatCurrency(hasAdjustments ? result.predictedMonthlySavings : result.currentMonthlySavings)}
                             </span>
                             {hasAdjustments && result.savingsDelta !== 0 && (
                                 <span className={`text-sm font-semibold mb-0.5 ${result.savingsDelta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                    {formatCurrency(result.savingsDelta)}/mo
+                                    {formatCurrencyDelta(result.savingsDelta)}/mo
                                 </span>
                             )}
                         </div>

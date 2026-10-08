@@ -3,7 +3,8 @@ import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { CATEGORIES } from '../constants';
 import { Category, Transaction, Budget, FinancialInsight, TransactionType } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY as string });
+const geminiApiKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+const ai = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
 const LOCAL_CATEGORIES_MAP: Record<string, Category> = {
   // Food & Dining
@@ -99,6 +100,18 @@ export const suggestCategory = async (description: string): Promise<Category | n
     return null;
   }
 
+  // Check fast local dictionary first
+  const lower = description.toLowerCase();
+  for (const [kw, cat] of Object.entries(LOCAL_CATEGORIES_MAP)) {
+    if (lower.includes(kw)) {
+      return cat;
+    }
+  }
+
+  if (!ai) {
+    return null;
+  }
+
   const prompt = `Based on the following expense description, what is the most appropriate category?
   Description: "${description}"
   
@@ -140,6 +153,10 @@ const transactionSchema = {
 export const parseTransactionFromText = async (text: string): Promise<Partial<Transaction> | null> => {
   if (!text.trim()) {
     return null;
+  }
+
+  if (!ai) {
+    return localNLPFallback(text);
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -191,6 +208,11 @@ const insightsSchema = {
 
 export const getFinancialInsights = async (transactions: Transaction[], budgets: Budget[]): Promise<FinancialInsight[]> => {
   if (transactions.length === 0) return [];
+  if (!ai) {
+    return [
+      { type: 'tip', message: "Track your expenses regularly to discover trends and personalized AI forecasts." }
+    ];
+  }
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const recentTransactions = transactions.slice(0, 50).map(t => ({

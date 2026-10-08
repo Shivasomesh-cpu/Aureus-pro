@@ -127,13 +127,19 @@ export const calculateHealthScores = (transactions: Transaction[], budgets: Budg
 
     // 3. Discretionary Control (budget adherence)
     let adherenceScore = 100;
-    budgets.forEach(b => {
-        const spent = expenses.filter(t => t.category === b.category).reduce((s, t) => s + t.amount, 0);
-        if (spent > b.amount) {
-            const overagePercent = (spent - b.amount) / b.amount;
-            adherenceScore -= (overagePercent * 20); // Deduct for overspending
-        }
-    });
+    if (budgets.length > 0) {
+        budgets.forEach(b => {
+            const relevantExpenses = expenses.filter(t => {
+                if (t.category !== b.category) return false;
+                return b.month ? t.date.slice(0, 7) === b.month : true;
+            });
+            const spent = relevantExpenses.reduce((s, t) => s + t.amount, 0);
+            if (spent > b.amount && b.amount > 0) {
+                const overagePercent = (spent - b.amount) / b.amount;
+                adherenceScore -= (overagePercent * 20); // Deduct for overspending
+            }
+        });
+    }
     const controlScore = Math.min(100, Math.max(0, adherenceScore));
 
     // 4. Essential Efficiency (Needs vs Wants - approximated by Housing/Food/Transport vs Other)
@@ -162,16 +168,18 @@ export const generateAnalysisNarrative = (scores: any[]) => {
 };
 
 export const getBudgetOptimization = (budgets: Budget[], transactions: Transaction[]) => {
+    const distinctMonths = Math.max(1, new Set(transactions.map(t => t.date.slice(0, 7))).size);
     return budgets.map(b => {
-        const spent = transactions
+        const totalCategorySpent = transactions
             .filter(t => t.category === b.category && t.type === TransactionType.EXPENSE)
             .reduce((sum, t) => sum + t.amount, 0);
+        const monthlyAvgSpent = totalCategorySpent / distinctMonths;
 
-        if (spent < b.amount * 0.7) {
+        if (monthlyAvgSpent < b.amount * 0.7 && monthlyAvgSpent > 0) {
             return {
                 category: b.category,
                 current: b.amount,
-                suggested: Math.round(b.amount * 0.8),
+                suggested: Math.round(monthlyAvgSpent * 1.15),
                 reason: "Consistently under budget."
             };
         }

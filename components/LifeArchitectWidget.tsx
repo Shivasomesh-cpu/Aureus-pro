@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Transaction, Budget, SavingsGoal, Debt, FinancialHealthScore, BehavioralProfile } from '../types';
+import { useSettings } from '../contexts/SettingsContext';
 import {
     runLifeArchitect,
     createGoalFromPreset,
@@ -53,6 +54,7 @@ const BURNOUT_COLORS = {
 const LifeArchitectWidget: React.FC<LifeArchitectWidgetProps> = ({
     transactions, budgets, savingsGoals, debts, healthScore, behavioralProfile
 }) => {
+    const { currencySymbol } = useSettings();
     const [selectedPreset, setSelectedPreset] = useState<PresetGoal | null>(null);
     const [customGoal, setCustomGoal] = useState<LifeGoal | null>(null);
     const [activePath, setActivePath] = useState<PathType | null>(null);
@@ -86,9 +88,9 @@ const LifeArchitectWidget: React.FC<LifeArchitectWidgetProps> = ({
     }, [activePath, result]);
 
     const formatCurrency = (val: number) => {
-        if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-        if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
-        return `$${val.toLocaleString()}`;
+        if (val >= 1000000) return `${currencySymbol}${(val / 1000000).toFixed(1)}M`;
+        if (val >= 1000) return `${currencySymbol}${(val / 1000).toFixed(1)}K`;
+        return `${currencySymbol}${val.toLocaleString()}`;
     };
 
     const getProbabilityColor = (prob: number) => {

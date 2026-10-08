@@ -75,7 +75,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isOpen, onClose, onSa
       type,
       amount: parseFloat(amount),
       description,
-      category: type === TransactionType.INCOME ? 'Salary' : category,
+      category,
       date: new Date(date).toISOString(),
       notes: notes.trim(),
     });
@@ -95,14 +95,20 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isOpen, onClose, onSa
             <div className="flex rounded-md shadow-sm">
               <button
                 type="button"
-                onClick={() => setType(TransactionType.EXPENSE)}
+                onClick={() => {
+                  setType(TransactionType.EXPENSE);
+                  setCategory(prev => prev === 'Salary' ? 'Food' : prev);
+                }}
                 className={`flex-1 py-2 px-4 rounded-l-md focus:outline-none ${type === TransactionType.EXPENSE ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
               >
                 Expense
               </button>
               <button
                 type="button"
-                onClick={() => setType(TransactionType.INCOME)}
+                onClick={() => {
+                  setType(TransactionType.INCOME);
+                  setCategory(prev => ['Salary', 'Investment', 'Other'].includes(prev) ? prev : 'Salary');
+                }}
                 className={`flex-1 py-2 px-4 rounded-r-md focus:outline-none ${type === TransactionType.INCOME ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
               >
                 Income
@@ -133,25 +139,27 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ isOpen, onClose, onSa
               required
             />
           </div>
-          {type === TransactionType.EXPENSE && (
-            <div className="mb-4">
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-              <div className="relative">
-                <select
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as Category)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white appearance-none"
-                  required
-                >
-                  {CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                {isSuggesting && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-primary-500">Suggesting...</span>}
-              </div>
+          <div className="mb-4">
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+            <div className="relative">
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as Category)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white appearance-none"
+                required
+              >
+                {type === TransactionType.INCOME
+                  ? ['Salary', 'Investment', 'Other'].map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))
+                  : CATEGORIES.filter(c => c !== 'Salary').map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+              </select>
+              {isSuggesting && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-primary-500">Suggesting...</span>}
             </div>
-          )}
+          </div>
           <div className="mb-4">
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (Optional)</label>
             <textarea

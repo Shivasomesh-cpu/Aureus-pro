@@ -1,9 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Currency = 'USD' | 'EUR' | 'GBP' | 'INR';
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'INR';
+
+export const CURRENCY_SYMBOLS: Record<Currency, string> = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    INR: '₹',
+};
 
 interface SettingsContextType {
     currency: Currency;
+    currencySymbol: string;
     setCurrency: (c: Currency) => void;
     formatCurrency: (amount: number) => string;
     formatDate: (date: string | Date) => string;
@@ -21,6 +29,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [currency]);
 
     const setCurrency = (c: Currency) => setCurrencyState(c);
+
+    const currencySymbol = CURRENCY_SYMBOLS[currency] || '$';
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -42,7 +52,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     return (
-        <SettingsContext.Provider value={{ currency, setCurrency, formatCurrency, formatDate }}>
+        <SettingsContext.Provider value={{ currency, currencySymbol, setCurrency, formatCurrency, formatDate }}>
             {children}
         </SettingsContext.Provider>
     );

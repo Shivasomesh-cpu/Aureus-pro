@@ -41,7 +41,8 @@ const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({ transactions, budge
             const totalIncome = transactions
                 .filter(t => t.type === 'income')
                 .reduce((sum, t) => sum + t.amount, 0);
-            const avgMonthlyIncome = transactions.length > 0 ? (totalIncome / (Math.max(1, transactions.length / 30))) : 5000;
+            const distinctMonths = Math.max(1, new Set(transactions.map(t => t.date.slice(0, 7))).size);
+            const avgMonthlyIncome = transactions.length > 0 ? (totalIncome / distinctMonths) : 5000;
             const currentBalance = transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
 
             const sim = runMonteCarloSimulation(currentBalance, avgMonthlyIncome, transactions);

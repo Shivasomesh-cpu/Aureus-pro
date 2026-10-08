@@ -19,7 +19,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
   const { expenseByCategory, incomeVsExpenseByMonth, kpiData } = useMemo(() => {
     const expenses: { name: Category; value: number }[] = [];
     const categoryMap = new Map<Category, number>();
-    const monthMap = new Map<string, { month: string; income: number; expense: number }>();
+    const monthMap = new Map<string, { month: string; key: string; income: number; expense: number }>();
 
     let totalIncome = 0;
     let totalExpense = 0;
@@ -34,18 +34,21 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
       }
 
       // Monthly Logic
-      const month = new Date(t.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-      if (!monthMap.has(month)) {
-        monthMap.set(month, { month, income: 0, expense: 0 });
+      const monthKey = t.date.slice(0, 7);
+      if (!monthMap.has(monthKey)) {
+        const [yearStr, monthStr] = monthKey.split('-');
+        const dateObj = new Date(parseInt(yearStr), parseInt(monthStr) - 1, 1);
+        const label = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+        monthMap.set(monthKey, { month: label, key: monthKey, income: 0, expense: 0 });
       }
-      const entry = monthMap.get(month)!;
+      const entry = monthMap.get(monthKey)!;
       if (t.type === TransactionType.INCOME) entry.income += t.amount;
       else entry.expense += t.amount;
     });
 
     categoryMap.forEach((value, name) => expenses.push({ name, value }));
     const sortedExpenses = expenses.sort((a, b) => b.value - a.value);
-    const sortedMonths = Array.from(monthMap.values()).sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+    const sortedMonths = Array.from(monthMap.values()).sort((a, b) => a.key.localeCompare(b.key));
 
     // KPI Calculations
     const netCashFlow = totalIncome - totalExpense;
@@ -55,7 +58,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
     return {
       expenseByCategory: sortedExpenses,
       incomeVsExpenseByMonth: sortedMonths,
-      kpiData: { netCashFlow, savingsRate, topExpense, totalIncome }
+      kpiData: { netCashFlow, savingsRate, topExpense, totalIncome, totalExpense }
     };
   }, [transactions]);
 
@@ -105,7 +108,7 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const text = e.target?.result as string;
         const lines = text.split(/\r?\n/);
@@ -265,7 +268,9 @@ const Reports: React.FC<ReportsProps> = ({ transactions }) => {
           {kpiData.topExpense && (
             <div className="text-xs text-rose-400 mt-1">
               {formatCurrency(kpiData.topExpense.value)}
-              <span className="text-slate-500 ml-1">({((kpiData.topExpense.value / (kpiData.totalIncome - kpiData.netCashFlow)) * 100).toFixed(0)}% of spend)</span>
+              {kpiData.totalExpense > 0 && (
+                <span className="text-slate-500 ml-1">({((kpiData.topExpense.value / kpiData.totalExpense) * 100).toFixed(0)}% of spend)</span>
+              )}
             </div>
           )}
         </div>

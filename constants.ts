@@ -15,6 +15,8 @@ export const CATEGORIES: Category[] = [
   'Transportation',
   'Housing',
   'Healthcare',
+  'Savings Envelope',
+  'Tax Envelope'
 ];
 
 export const CATEGORY_COLORS: Record<Category, string> = {
@@ -31,4 +33,6 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   Transportation: 'bg-blue-600',
   Housing: 'bg-amber-600',
   Healthcare: 'bg-rose-500',
+  'Savings Envelope': 'bg-emerald-400',
+  'Tax Envelope': 'bg-red-400',
 };

@@ -26,6 +26,7 @@ import { calculateFinancialHealthScore } from './services/healthScoreService';
 import { generateBehavioralProfile } from './services/deepAnalysisEngine';
 import { generateBudgetTuning } from './services/autonomousBudgetTuner';
 import { generateHealthOptimization } from './services/proactiveHealthOptimizer';
+import { generateDemoData, clearData } from './utils/dataSeeder';
 
 const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -51,25 +52,68 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'reports' | 'ai'>('dashboard');
 
   useEffect(() => {
-    setTransactions(getTransactions());
-    setBudgets(getBudgets());
-    setSavingsGoals(getSavingsGoals());
-    setRecurringTransactions(getRecurringTransactions());
-    setDebts(getDebts());
-    setSubscriptions(getSubscriptions());
-    const savedHealth = getHealthMetrics();
-    if (savedHealth) setHealthScore(savedHealth);
-    const savedProfile = getBehavioralProfile();
-    if (savedProfile) setBehavioralProfile(savedProfile);
-    const savedTuning = getBudgetTuning();
-    if (savedTuning) setBudgetTuning(savedTuning);
-    const savedOptimization = getHealthOptimization();
-    if (savedOptimization) setHealthOptimization(savedOptimization);
+    const initData = async () => {
+      let txs = await getTransactions();
+      let bgs = getBudgets();
+      let goals = getSavingsGoals();
+      let recs = getRecurringTransactions();
+      let dts = getDebts();
+      let subs = getSubscriptions();
 
-    checkRecurringTransactions();
-    updateSubscriptions();
-    updateHealthScore();
-    updateAlerts();
+      // If user has no transactions at all (first visit or wiped state), seed realistic multi-month scenario
+      if (!txs || txs.length === 0) {
+        const demo = generateDemoData('USD');
+        await saveTransactions(demo.transactions);
+        saveBudgets(demo.budgets);
+        saveSavingsGoals(demo.savingsGoals);
+        saveRecurringTransactions(demo.recurringTransactions);
+        saveDebts(demo.debts);
+        saveSubscriptions(demo.subscriptions);
+
+        txs = demo.transactions;
+        bgs = demo.budgets;
+        goals = demo.savingsGoals;
+        recs = demo.recurringTransactions;
+        dts = demo.debts;
+        subs = demo.subscriptions;
+      }
+
+      setTransactions(txs);
+      setBudgets(bgs);
+      setSavingsGoals(goals);
+      setRecurringTransactions(recs);
+      setDebts(dts);
+      setSubscriptions(subs);
+
+      const score = calculateFinancialHealthScore(txs, dts, goals);
+      setHealthScore(score);
+      saveHealthMetrics(score);
+
+      const profile = generateBehavioralProfile(txs, goals);
+      if (profile) {
+        setBehavioralProfile(profile);
+        saveBehavioralProfile(profile);
+      }
+
+      const tuning = generateBudgetTuning(txs, bgs);
+      if (tuning) {
+        setBudgetTuning(tuning);
+        saveBudgetTuning(tuning);
+      }
+
+      const opt = generateHealthOptimization(txs, bgs, dts, goals, score);
+      if (opt) {
+        setHealthOptimization(opt);
+        saveHealthOptimization(opt);
+      }
+
+      const initialAlerts = generateAllAlerts(txs, recs, subs, dts, []);
+      setAlerts(initialAlerts);
+
+      await checkRecurringTransactions();
+    };
+
+    initData();
   }, []);
 
   // Update health score, alerts, and AI/ML engines when data changes
@@ -82,7 +126,7 @@ const App: React.FC = () => {
   }, [transactions, debts, savingsGoals, recurringTransactions, subscriptions, budgets]);
 
 
-  const checkRecurringTransactions = () => {
+  const checkRecurringTransactions = async () => {
     const recs = getRecurringTransactions();
     const today = new Date().toISOString().split('T')[0];
     let newTransactionsFound = false;
@@ -113,10 +157,10 @@ const App: React.FC = () => {
     });
 
     if (newTransactionsFound) {
-      const currentTransactions = getTransactions();
+      const currentTransactions = await getTransactions();
       const allTransactions = [...currentTransactions, ...newTransactions];
       setTransactions(allTransactions);
-      saveTransactions(allTransactions);
+      await saveTransactions(allTransactions);
       setRecurringTransactions(updatedRecs);
       saveRecurringTransactions(updatedRecs);
       // Optional: Notify user
@@ -256,6 +300,58 @@ const App: React.FC = () => {
   };
 
 
+  // Reactive Demo Data Loader (Zero reload flicker)
+  const handleLoadDemoData = useCallback((currency = 'USD') => {
+    const demo = generateDemoData(currency);
+    saveTransactions(demo.transactions);
+    saveBudgets(demo.budgets);
+    saveSavingsGoals(demo.savingsGoals);
+    saveRecurringTransactions(demo.recurringTransactions);
+    saveDebts(demo.debts);
+    saveSubscriptions(demo.subscriptions);
+
+    setTransactions(demo.transactions);
+    setBudgets(demo.budgets);
+    setSavingsGoals(demo.savingsGoals);
+    setRecurringTransactions(demo.recurringTransactions);
+    setDebts(demo.debts);
+    setSubscriptions(demo.subscriptions);
+
+    const score = calculateFinancialHealthScore(demo.transactions, demo.debts, demo.savingsGoals);
+    setHealthScore(score);
+    saveHealthMetrics(score);
+
+    const profile = generateBehavioralProfile(demo.transactions, demo.savingsGoals);
+    setBehavioralProfile(profile);
+    if (profile) saveBehavioralProfile(profile);
+
+    const tuning = generateBudgetTuning(demo.transactions, demo.budgets);
+    setBudgetTuning(tuning);
+    if (tuning) saveBudgetTuning(tuning);
+
+    const opt = generateHealthOptimization(demo.transactions, demo.budgets, demo.debts, demo.savingsGoals, score);
+    setHealthOptimization(opt);
+    if (opt) saveHealthOptimization(opt);
+
+    const newAlerts = generateAllAlerts(demo.transactions, demo.recurringTransactions, demo.subscriptions, demo.debts, []);
+    setAlerts(newAlerts);
+  }, []);
+
+  const handleResetData = useCallback(() => {
+    clearData();
+    setTransactions([]);
+    setBudgets([]);
+    setSavingsGoals([]);
+    setRecurringTransactions([]);
+    setDebts([]);
+    setSubscriptions([]);
+    setHealthScore(null);
+    setBehavioralProfile(null);
+    setBudgetTuning(null);
+    setHealthOptimization(null);
+    setAlerts([]);
+  }, []);
+
   const handleSaveTransaction = useCallback((transaction: Transaction) => {
     const existingIndex = transactions.findIndex(t => t.id === transaction.id);
     let updatedTransactions;
@@ -393,6 +489,10 @@ const App: React.FC = () => {
             alerts={alerts}
             onDismissAlert={handleDismissAlert}
             onSnoozeAlert={handleSnoozeAlert}
+            onLoadDemoData={handleLoadDemoData}
+            onResetData={handleResetData}
+            budgetCount={budgets.length}
+            debtCount={debts.length}
           />
 
           <main className={`container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 ${currentView === 'ai' ? 'max-w-screen-2xl' : 'max-w-7xl'}`}>
