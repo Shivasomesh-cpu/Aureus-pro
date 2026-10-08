@@ -11,8 +11,8 @@ interface SummaryCardProps {
 const TrendIndicator: React.FC<{ trend: number }> = ({ trend }) => {
   const isPositive = trend >= 0;
   const color = isPositive
-    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+    : 'bg-rose-50 text-rose-700 border border-rose-200';
   const symbol = isPositive ? '▲' : '▼';
 
   if (isNaN(trend) || !isFinite(trend)) return null;
@@ -60,38 +60,32 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, amount, colorClass, tr
   const glowColor = isPositive ? 'bg-emerald-500' : 'bg-rose-500';
 
   return (
-    <div className="relative group animate-fade-in-up card-glow">
-      {/* Outer glow */}
-      <div className={`absolute -inset-0.5 bg-gradient-to-r ${gradientFrom}/20 ${gradientTo}/20 rounded-2xl blur opacity-0 group-hover:opacity-50 transition-all duration-700`}></div>
-
-      <div className="relative glass-premium p-5 md:p-6 rounded-2xl overflow-hidden transition-all duration-500 group-hover:border-white/15">
-        {/* Corner accent */}
-        <div className={`absolute top-0 right-0 w-28 h-28 -mr-6 -mt-6 rounded-full blur-3xl opacity-[0.06] group-hover:opacity-[0.12] transition-opacity duration-700 ${glowColor}`}></div>
-
-        {/* Decorative dot pattern */}
-        <div className="absolute bottom-3 right-3 grid grid-cols-3 gap-1 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity">
+    <div className="relative group animate-fade-in-up">
+      <div className="relative glass-premium p-5 md:p-6 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-md border border-slate-200/80 hover:border-slate-300 bg-white">
+        {/* Subtle decorative dot pattern */}
+        <div className="absolute bottom-3 right-3 grid grid-cols-3 gap-1 opacity-[0.12] pointer-events-none">
           {[...Array(9)].map((_, i) => (
-            <div key={i} className="w-1 h-1 rounded-full bg-white"></div>
+            <div key={i} className="w-1 h-1 rounded-full bg-slate-400"></div>
           ))}
         </div>
 
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-3">
-            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">{title}</h3>
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{title}</h3>
             {trend !== undefined && <TrendIndicator trend={trend} />}
           </div>
 
           <div className="flex items-baseline gap-1">
-            <p className={`text-2xl md:text-3xl font-bold tracking-tight ${colorClass} transition-transform duration-500 origin-left group-hover:scale-[1.03]`}>
+            <p className={`text-2xl md:text-3xl font-extrabold tracking-tight ${colorClass} transition-transform duration-300 origin-left group-hover:scale-[1.02]`}>
               {formattedAmount}
             </p>
           </div>
 
           {/* Progress bar accent */}
-          <div className="mt-4 w-full h-[3px] bg-white/5 rounded-full overflow-hidden">
+          <div className="mt-4 w-full h-[3px] bg-slate-100 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full bg-gradient-to-r ${gradientFrom} ${gradientTo} transition-all duration-1000 ease-out`}
-              style={{ width: `${Math.min(Math.abs(amount) / 100, 100)}%`, opacity: 0.4 }}
+              className={`h-full rounded-full bg-gradient-to-r ${gradientFrom} ${gradientTo} transition-all duration-700 ease-out`}
+              style={{ width: `${Math.min(Math.abs(amount) / 100, 100)}%`, opacity: 0.8 }}
             ></div>
           </div>
         </div>

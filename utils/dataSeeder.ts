@@ -318,4 +318,5 @@ export const clearData = () => {
     localStorage.removeItem('expenseTrackerBehavioralProfile');
     localStorage.removeItem('expenseTrackerBudgetTuning');
     localStorage.removeItem('expenseTrackerHealthOptimization');
+    localStorage.removeItem('aureusFinancialPlan');
 };

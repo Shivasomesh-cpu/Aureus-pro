@@ -11,31 +11,31 @@ import { useSettings } from '../contexts/SettingsContext';
 const ProgressBar: React.FC<{ value: number; max: number; category: Category }> = ({ value, max, category }) => {
   const { formatCurrency } = useSettings();
   const percentage = max > 0 ? (value / max) * 100 : 0;
-  let colorClass = 'bg-gradient-to-r from-emerald-500 to-emerald-400';
+  let colorClass = 'bg-gradient-to-r from-emerald-500 to-teal-500';
 
   if (percentage > 90) {
-    colorClass = 'bg-gradient-to-r from-rose-500 to-rose-400';
+    colorClass = 'bg-gradient-to-r from-rose-500 to-red-500';
   } else if (percentage > 75) {
-    colorClass = 'bg-gradient-to-r from-amber-500 to-amber-400';
+    colorClass = 'bg-gradient-to-r from-amber-500 to-yellow-500';
   }
 
   return (
     <div className="group">
       <div className="flex justify-between items-end mb-2">
-        <span className="text-sm font-medium text-gray-300 font-sans tracking-tight">{category}</span>
+        <span className="text-sm font-semibold text-slate-700 font-sans tracking-tight">{category}</span>
         <div className="text-right">
-          <span className="text-xs font-semibold text-white">{formatCurrency(value)}</span>
-          <span className="text-[10px] text-gray-500 ml-1">/ {formatCurrency(max)}</span>
+          <span className="text-xs font-bold text-slate-900">{formatCurrency(value)}</span>
+          <span className="text-[10px] text-slate-400 font-medium ml-1">/ {formatCurrency(max)}</span>
         </div>
       </div>
-      <div className="w-full bg-slate-700/50 rounded-full h-1.5 overflow-hidden backdrop-blur-sm border border-white/5">
+      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/60">
         <div
-          className={`${colorClass} h-1.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.3)] transition-all duration-500 ease-out`}
+          className={`${colorClass} h-2 rounded-full transition-all duration-500 ease-out`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         ></div>
       </div>
       {percentage > 100 && (
-        <p className="text-[10px] text-rose-400 mt-1 font-medium tracking-wide">Exceeded by {((percentage - 100)).toFixed(0)}%</p>
+        <p className="text-[10px] text-rose-600 mt-1 font-bold tracking-wide">Exceeded by {((percentage - 100)).toFixed(0)}%</p>
       )}
     </div>
   );
@@ -63,23 +63,23 @@ const BudgetProgress: React.FC<BudgetProgressProps> = ({ budgets, transactions }
   if (activeBudgets.length === 0) {
     return (
       <div className="glass-card p-6 rounded-2xl h-full text-center flex flex-col items-center justify-center min-h-[300px]">
-        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4 border border-slate-200">
           <span className="text-2xl">📊</span>
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">Monthly Budgets</h3>
-        <p className="text-gray-500 dark:text-gray-400">You haven't set any budgets for this month.</p>
-        <p className="text-sm text-gray-400 dark:text-gray-500">Click "Manage Budgets" to get started.</p>
+        <h3 className="text-lg font-bold text-slate-900 mb-1">Monthly Budgets</h3>
+        <p className="text-slate-500 text-xs">You haven't set any budgets for this month.</p>
+        <p className="text-xs text-amber-700 font-bold mt-2">Click "Manage Budgets" in the header to get started.</p>
       </div>
     );
   }
 
   return (
     <div className="glass-card p-6 rounded-2xl h-full">
-      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-        <span className="w-1 h-6 bg-emerald-500 rounded-full"></span>
+      <h3 className="text-base font-bold text-slate-900 mb-6 flex items-center gap-2">
+        <span className="w-1 h-5 bg-emerald-500 rounded-full"></span>
         Budget Progress
       </h3>
-      <div className="space-y-6">
+      <div className="space-y-5">
         {activeBudgets.map(budget => (
           <ProgressBar
             key={budget.id}

@@ -1,90 +1,23 @@
 import {
     FinancialHealthScore,
-    CreditScore,
     EmergencyFundMetrics,
     RetirementMetrics,
     DebtHealthMetrics,
     Transaction,
     TransactionType,
     Debt,
-    SavingsGoal
+    SavingsGoal,
+    FinancialPlan
 } from '../types';
 
 /**
  * Financial Health Score Service
  * 
- * Calculates comprehensive financial health metrics:
- * - Credit score simulation (300-850)
+ * Calculates financial health metrics from user-entered records:
  * - Emergency fund adequacy
  * - Retirement readiness
  * - Debt health
  */
-
-/**
- * Calculate simulated credit score based on financial behavior
- */
-export function calculateCreditScore(
-    transactions: Transaction[],
-    debts: Debt[],
-    accountAgeMonths: number = 24 // Default 2 years
-): CreditScore {
-    // Payment History (35% weight) - Based on consistent income and no late payments
-    const incomeTransactions = transactions.filter(t => t.type === TransactionType.INCOME);
-    const hasRegularIncome = incomeTransactions.length >= 3;
-    const paymentHistory = hasRegularIncome ? 90 : 60; // 0-100 score
-
-    // Credit Utilization (30% weight) - Revolving Debt vs Available Credit Line
-    const creditCardDebt = debts.filter(d => d.type === 'credit_card').reduce((sum, d) => sum + d.balance, 0);
-    const totalDebt = debts.reduce((sum, d) => sum + d.balance, 0);
-    const totalIncome = incomeTransactions.reduce((s, t) => s + t.amount, 0);
-    const distinctMonths = Math.max(1, new Set(transactions.map(t => t.date.slice(0, 7))).size);
-    const monthlyIncome = totalIncome / distinctMonths;
-    const baselineLimit = Math.max(5000, monthlyIncome * 3.5);
-    const activeRevolving = creditCardDebt > 0 ? creditCardDebt : totalDebt * 0.25;
-    const utilizationRatio = Math.min(1, activeRevolving / baselineLimit);
-    const creditUtilization = Math.round(Math.max(0, (1 - utilizationRatio) * 100));
-
-    // Account Age (15% weight)
-    const accountAge = Math.min(100, (accountAgeMonths / 120) * 100); // Max at 10 years
-
-    // Credit Mix (10% weight) - Variety of debt types
-    const debtTypes = new Set(debts.map(d => d.type));
-    const creditMix = Math.min(100, (debtTypes.size / 5) * 100); // Max 5 types
-
-    // New Credit (10% weight) - Assume good if not too many debts
-    const newCredit = debts.length <= 3 ? 85 : Math.max(50, 100 - (debts.length * 10));
-
-    // Calculate weighted score
-    const rawScore =
-        (paymentHistory * 0.35) +
-        (creditUtilization * 0.30) +
-        (accountAge * 0.15) +
-        (creditMix * 0.10) +
-        (newCredit * 0.10);
-
-    // Convert to 300-850 range
-    const score = Math.round(300 + (rawScore / 100) * 550);
-
-    // Determine rating
-    let rating: CreditScore['rating'];
-    if (score >= 800) rating = 'Excellent';
-    else if (score >= 740) rating = 'Very Good';
-    else if (score >= 670) rating = 'Good';
-    else if (score >= 580) rating = 'Fair';
-    else rating = 'Poor';
-
-    return {
-        score,
-        rating,
-        factors: {
-            paymentHistory,
-            creditUtilization,
-            accountAge,
-            creditMix,
-            newCredit,
-        },
-    };
-}
 
 /**
  * Calculate emergency fund adequacy
@@ -99,10 +32,10 @@ export function calculateEmergencyFund(
     if (expenseTransactions.length === 0) {
         return {
             currentAmount: 0,
-            recommendedAmount: 5000,
+            recommendedAmount: 0,
             monthsCovered: 0,
-            adequacy: 'Critical',
-            monthlyExpenses: 5000,
+            adequacy: 'Not set',
+            monthlyExpenses: 0,
         };
     }
 
@@ -156,8 +89,7 @@ export function calculateEmergencyFund(
 export function calculateRetirementReadiness(
     transactions: Transaction[],
     savingsGoals: SavingsGoal[],
-    currentAge: number = 35,
-    retirementAge: number = 65
+    plan?: FinancialPlan | null
 ): RetirementMetrics {
     // Find retirement or investment savings
     const retirementGoal = savingsGoals.find(g =>
@@ -167,7 +99,7 @@ export function calculateRetirementReadiness(
         g.name.toLowerCase().includes('ira')
     );
 
-    const currentSavings = retirementGoal?.currentAmount || 0;
+    const currentSavings = plan?.retirementSavings ?? retirementGoal?.currentAmount ?? 0;
 
     // Calculate monthly contribution (from recent savings/investment transactions)
     const now = new Date();
@@ -186,40 +118,41 @@ export function calculateRetirementReadiness(
     // We'll take the absolute sum and average it
     const totalInvested = investmentTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
     const monthsDiff = Math.max(1, (now.getTime() - sixMonthsAgo.getTime()) / (1000 * 60 * 60 * 24 * 30));
-    const monthlyContribution = totalInvested / monthsDiff;
+    const monthlyContribution = plan
+        ? plan.sipInvestments.reduce((sum, investment) => sum + Math.max(0, investment.monthlyAmount), 0)
+        : totalInvested / monthsDiff;
+
+    const currentAge = plan?.currentAge ?? 0;
+    const retirementAge = plan?.retirementAge ?? 0;
 
     const yearsToRetirement = Math.max(0, retirementAge - currentAge);
 
-    // Simple projection (assuming 7% annual return for a middle-class balanced portfolio)
-    const annualReturn = 0.07;
+    const monthlyInvestmentTotal = plan?.sipInvestments.reduce((sum, investment) => sum + Math.max(0, investment.monthlyAmount), 0) ?? 0;
+    const annualReturn = monthlyInvestmentTotal > 0
+        ? plan!.sipInvestments.reduce((sum, investment) => sum + Math.max(0, investment.monthlyAmount) * investment.expectedAnnualReturn, 0) / monthlyInvestmentTotal / 100
+        : 0;
     const monthlyReturn = annualReturn / 12;
     const months = yearsToRetirement * 12;
 
     // FV = P(1+r)^n + PMT[(1+r)^n - 1]/r
-    const futureValue = currentSavings * Math.pow(1 + monthlyReturn, months) +
-        monthlyContribution * ((Math.pow(1 + monthlyReturn, months) - 1) / monthlyReturn);
+    const futureValue = monthlyReturn === 0
+        ? currentSavings + monthlyContribution * months
+        : currentSavings * Math.pow(1 + monthlyReturn, months) +
+          monthlyContribution * ((Math.pow(1 + monthlyReturn, months) - 1) / monthlyReturn);
 
-    // Estimate required retirement income (70% of current net income)
-    const incomeTransactions = transactions.filter(t =>
-        t.type === TransactionType.INCOME &&
-        (t.category.toLowerCase() === 'salary' || t.category.toLowerCase() === 'income')
-    );
-
-    // Calculate average monthly income over the period
-    const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const monthlyIncome = totalIncome / monthsDiff;
-    const avgMonthlyIncome = monthlyIncome > 0 ? monthlyIncome : 5000; // Default fallback for middle-class
-
-    const requiredMonthlyIncome = avgMonthlyIncome * 0.7;
+    const requiredMonthlyIncome = plan?.desiredMonthlyRetirementIncome ?? 0;
 
     // Assume 4% safe withdrawal rate in retirement
     const projectedRetirementIncome = (futureValue * 0.04) / 12;
 
     // Determine readiness
     let readiness: RetirementMetrics['readiness'];
-    const readinessRatio = requiredMonthlyIncome > 0 ? projectedRetirementIncome / requiredMonthlyIncome : 1;
+    const yearsInflation = Math.max(0, yearsToRetirement);
+    const targetAtRetirement = requiredMonthlyIncome * Math.pow(1.03, yearsInflation);
+    const readinessRatio = targetAtRetirement > 0 ? projectedRetirementIncome / targetAtRetirement : 0;
 
-    if (readinessRatio >= 1.2) readiness = 'Ahead';
+    if (!plan?.currentAge || !plan.retirementAge || !requiredMonthlyIncome) readiness = 'Not set';
+    else if (readinessRatio >= 1.2) readiness = 'Ahead';
     else if (readinessRatio >= 0.8) readiness = 'On Track';
     else readiness = 'Behind';
 
@@ -269,7 +202,10 @@ export function calculateDebtHealth(
     let rating: DebtHealthMetrics['rating'];
     let recommendation: string;
 
-    if (debtToIncomeRatio === 0) {
+    if (monthlyIncome <= 0) {
+        rating = 'Not set';
+        recommendation = 'Add income transactions to estimate this ratio.';
+    } else if (debtToIncomeRatio === 0) {
         rating = 'Excellent';
         recommendation = 'You have no debt! Keep up the great work and focus on building wealth.';
     } else if (debtToIncomeRatio < 20) {
@@ -305,39 +241,30 @@ export function calculateFinancialHealthScore(
     transactions: Transaction[],
     debts: Debt[],
     savingsGoals: SavingsGoal[],
-    currentAge?: number
+    plan?: FinancialPlan | null
 ): FinancialHealthScore {
-    const creditScore = calculateCreditScore(transactions, debts);
     const emergencyFund = calculateEmergencyFund(transactions, savingsGoals);
-    const retirement = calculateRetirementReadiness(transactions, savingsGoals, currentAge);
+    const retirement = calculateRetirementReadiness(transactions, savingsGoals, plan);
     const debtHealth = calculateDebtHealth(transactions, debts);
 
     // Calculate overall score (0-100)
-    // Credit score: 30% weight
-    const creditScoreNormalized = ((creditScore.score - 300) / 550) * 100;
-    const creditWeight = creditScoreNormalized * 0.30;
-
-    // Emergency fund: 25% weight
-    const emergencyFundScore = Math.min(100, (emergencyFund.monthsCovered / 6) * 100);
-    const emergencyWeight = emergencyFundScore * 0.25;
-
-    // Retirement: 25% weight
+    const emergencyFundScore = emergencyFund.monthlyExpenses > 0
+        ? Math.min(100, (emergencyFund.monthsCovered / 6) * 100)
+        : 50;
+    const emergencyWeight = emergencyFundScore * 0.35;
     const retirementScore = retirement.readiness === 'Ahead' ? 100 :
-        retirement.readiness === 'On Track' ? 75 : 50;
-    const retirementWeight = retirementScore * 0.25;
-
-    // Debt health: 20% weight
-    const debtScore = debtHealth.rating === 'Excellent' ? 100 :
+        retirement.readiness === 'On Track' ? 75 : retirement.readiness === 'Behind' ? 35 : 50;
+    const retirementWeight = retirementScore * 0.30;
+    const debtScore = debtHealth.rating === 'Not set' ? 50 : debtHealth.rating === 'Excellent' ? 100 :
         debtHealth.rating === 'Good' ? 80 :
             debtHealth.rating === 'Fair' ? 60 :
                 debtHealth.rating === 'Poor' ? 40 : 20;
-    const debtWeight = debtScore * 0.20;
+    const debtWeight = debtScore * 0.35;
 
-    const overallScore = Math.round(creditWeight + emergencyWeight + retirementWeight + debtWeight);
+    const overallScore = Math.round(emergencyWeight + retirementWeight + debtWeight);
 
     return {
         overallScore,
-        creditScore,
         emergencyFund,
         retirement,
         debtHealth,

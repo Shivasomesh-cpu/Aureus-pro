@@ -42,6 +42,21 @@ export interface SavingsGoal {
   color: string;
 }
 
+export interface SipInvestment {
+  id: string;
+  name: string;
+  monthlyAmount: number;
+  expectedAnnualReturn: number;
+}
+
+export interface FinancialPlan {
+  currentAge: number | null;
+  retirementAge: number | null;
+  retirementSavings: number;
+  desiredMonthlyRetirementIncome: number;
+  sipInvestments: SipInvestment[];
+}
+
 export interface RecurringTransaction {
   id: string;
   type: TransactionType;
@@ -82,8 +97,11 @@ export interface DebtPayoffPlan {
   debts: DebtPayoffSchedule[];
   totalInterest: number;
   totalMonths: number;
+  payoffPossible: boolean;
   monthlyPayment: number;
   payoffDate: string; // ISO Date
+  trajectory?: { month: number; totalBalance: number; interestPaid: number; principalPaid: number }[];
+  windfall?: { amount: number; month: number };
 }
 
 export interface DebtPayoffSchedule {
@@ -168,30 +186,17 @@ export interface Subscription {
 
 export interface FinancialHealthScore {
   overallScore: number; // 0-100
-  creditScore: CreditScore;
   emergencyFund: EmergencyFundMetrics;
   retirement: RetirementMetrics;
   debtHealth: DebtHealthMetrics;
   lastCalculated: string; // ISO Date
 }
 
-export interface CreditScore {
-  score: number; // 300-850
-  rating: 'Poor' | 'Fair' | 'Good' | 'Very Good' | 'Excellent';
-  factors: {
-    paymentHistory: number; // 0-100 (35% weight)
-    creditUtilization: number; // 0-100 (30% weight)
-    accountAge: number; // 0-100 (15% weight)
-    creditMix: number; // 0-100 (10% weight)
-    newCredit: number; // 0-100 (10% weight)
-  };
-}
-
 export interface EmergencyFundMetrics {
   currentAmount: number;
   recommendedAmount: number; // 3-6 months of expenses
   monthsCovered: number;
-  adequacy: 'Critical' | 'Low' | 'Moderate' | 'Good' | 'Excellent';
+  adequacy: 'Not set' | 'Critical' | 'Low' | 'Moderate' | 'Good' | 'Excellent';
   monthlyExpenses: number;
 }
 
@@ -202,7 +207,7 @@ export interface RetirementMetrics {
   monthlyContribution: number;
   projectedRetirementIncome: number;
   requiredMonthlyIncome: number;
-  readiness: 'Behind' | 'On Track' | 'Ahead';
+  readiness: 'Not set' | 'Behind' | 'On Track' | 'Ahead';
   yearsToRetirement: number;
 }
 
@@ -210,7 +215,7 @@ export interface DebtHealthMetrics {
   totalDebt: number;
   monthlyIncome: number;
   debtToIncomeRatio: number; // Percentage
-  rating: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Critical';
+  rating: 'Not set' | 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Critical';
   recommendation: string;
 }
 

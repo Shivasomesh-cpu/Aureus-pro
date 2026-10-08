@@ -65,41 +65,41 @@ const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({ transactions, budge
 
     if (transactions.length < 5) {
         return (
-            <div className="glass-card p-6 rounded-2xl mb-8 flex items-center gap-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
-                <div className="p-3 bg-indigo-500/20 rounded-xl">
-                    <SparklesIcon className="w-6 h-6 text-indigo-400" />
+            <div className="glass-card p-6 rounded-2xl mb-8 flex items-center gap-4 bg-indigo-50/60 border border-indigo-200/60 shadow-xs">
+                <div className="p-3 bg-indigo-100 rounded-xl">
+                    <SparklesIcon className="w-6 h-6 text-indigo-600" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-white">AI Insights</h3>
-                    <p className="text-sm text-gray-400">Add a few more transactions to unlock personalized financial advice.</p>
+                    <h3 className="font-bold text-slate-900">AI Insights</h3>
+                    <p className="text-sm text-slate-500">Add a few more transactions or upload a statement to unlock personalized financial advice.</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="glass-card p-6 rounded-2xl mb-8 relative overflow-hidden">
+        <div className="glass-card p-6 rounded-2xl mb-8 relative overflow-hidden bg-white border border-slate-200/80 shadow-xs">
             <div className="flex items-center gap-2 mb-4">
-                <SparklesIcon className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-lg font-bold text-white">AI Financial Assistant</h3>
-                {loading && <span className="text-xs text-indigo-400 animate-pulse ml-auto">Analyzing finances...</span>}
+                <SparklesIcon className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-lg font-bold text-slate-900">AI Financial Assistant</h3>
+                {loading && <span className="text-xs text-indigo-600 font-semibold animate-pulse ml-auto">Analyzing finances...</span>}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 {insights.slice(0, 3).map((insight, index) => (
-                    <div key={index} className="bg-slate-800/40 border border-white/5 p-4 rounded-xl hover:bg-slate-800/60 transition-colors backdrop-blur-sm shadow-md">
+                    <div key={index} className="bg-slate-50 border border-slate-200/70 p-4 rounded-xl hover:bg-slate-100/60 transition-colors shadow-xs">
                         <div className="flex items-start gap-3">
-                            <div className={`mt-1 p-2 rounded-lg ${insight.type === 'alert' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                                insight.type === 'prediction' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                    'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            <div className={`mt-1 p-2 rounded-lg ${insight.type === 'alert' ? 'bg-rose-100 text-rose-700 border border-rose-200' :
+                                insight.type === 'prediction' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                                    'bg-amber-100 text-amber-800 border border-amber-200'
                                 }`}>
                                 {insight.type === 'alert' && <ExclamationTriangleIcon className="w-5 h-5" />}
                                 {insight.type === 'prediction' && <ArrowTrendingUpIcon className="w-5 h-5" />}
                                 {insight.type === 'tip' && <LightBulbIcon className="w-5 h-5" />}
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 font-sans">{insight.type}</p>
-                                <p className="text-sm text-gray-200 leading-relaxed font-medium">{insight.message}</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-sans">{insight.type}</p>
+                                <p className="text-sm text-slate-800 leading-relaxed font-semibold">{insight.message}</p>
                             </div>
                         </div>
                     </div>
@@ -108,19 +108,19 @@ const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({ transactions, budge
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Simulation Chart Section */}
-                <div className="lg:col-span-2 bg-slate-800/40 border border-white/5 p-6 rounded-2xl shadow-lg backdrop-blur-sm">
+                <div className="lg:col-span-2 bg-slate-50 border border-slate-200/70 p-6 rounded-2xl shadow-xs">
                     <AISimulationChart data={simulationData || []} />
                 </div>
 
                 {/* Radar & Health Section */}
-                <div className="lg:col-span-1 bg-slate-800/40 border border-white/5 p-6 rounded-2xl shadow-lg backdrop-blur-sm flex flex-col justify-between">
+                <div className="lg:col-span-1 bg-slate-50 border border-slate-200/70 p-6 rounded-2xl shadow-xs flex flex-col justify-between">
                     <FinancialHealthRadar data={healthData} />
-                    <div className="mt-4 pt-4 border-t border-white/5">
+                    <div className="mt-4 pt-4 border-t border-slate-200">
                         <div className="flex items-center gap-2 mb-2">
-                            <DocumentArrowDownIcon className="w-4 h-4 text-emerald-400" />
-                            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Chief Advisor's Analysis</h4>
+                            <DocumentArrowDownIcon className="w-4 h-4 text-emerald-600" />
+                            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Chief Advisor's Analysis</h4>
                         </div>
-                        <p className="text-xs text-gray-400 leading-relaxed italic">
+                        <p className="text-xs text-slate-600 leading-relaxed italic">
                             "{narrative}"
                         </p>
                     </div>
@@ -129,31 +129,31 @@ const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({ transactions, budge
                 {/* Optimization & Intelligence Section (Full Width Now) */}
                 <div className="lg:col-span-3">
                     <div className="flex items-center gap-2 mb-4">
-                        <ChartBarIcon className="w-5 h-5 text-emerald-400" />
-                        <h4 className="text-sm font-semibold text-white uppercase tracking-wider">Smart Budget Recommendations</h4>
+                        <ChartBarIcon className="w-5 h-5 text-emerald-600" />
+                        <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Smart Budget Recommendations</h4>
                     </div>
 
                     {optimizations.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {optimizations.map((opt, idx) => (
-                                <div key={idx} className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-xl hover:bg-emerald-500/10 transition-colors">
+                                <div key={idx} className="bg-emerald-50/60 border border-emerald-200/70 p-4 rounded-xl hover:bg-emerald-50 transition-colors">
                                     <div className="flex justify-between items-start mb-2">
-                                        <span className="text-sm font-medium text-emerald-400">{opt.category}</span>
-                                        <span className="text-xs bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/20">-{Math.round((1 - opt.suggested / opt.current) * 100)}% Cut</span>
+                                        <span className="text-sm font-bold text-emerald-800">{opt.category}</span>
+                                        <span className="text-xs bg-emerald-100 px-2 py-0.5 rounded text-emerald-800 border border-emerald-200 font-bold">-{Math.round((1 - opt.suggested / opt.current) * 100)}% Cut</span>
                                     </div>
-                                    <p className="text-xs text-gray-400 mb-3 h-8 line-clamp-2">{opt.reason}</p>
+                                    <p className="text-xs text-slate-600 mb-3 h-8 line-clamp-2">{opt.reason}</p>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-emerald-500" style={{ width: `${(opt.suggested / opt.current) * 100}%` }}></div>
+                                        <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(opt.suggested / opt.current) * 100}%` }}></div>
                                         </div>
-                                        <span className="text-[10px] text-gray-500 font-mono">{formatCurrency(opt.current)} → {formatCurrency(opt.suggested)}</span>
+                                        <span className="text-[10px] text-slate-500 font-mono font-bold">{formatCurrency(opt.current)} → {formatCurrency(opt.suggested)}</span>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-8 bg-slate-800/40 rounded-xl border border-dashed border-white/10">
-                            <p className="text-xs text-gray-500">Collect more transaction data to enable budget optimization algorithms.</p>
+                        <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                            <p className="text-xs text-slate-500">Collect more transaction data to enable budget optimization algorithms.</p>
                         </div>
                     )}
                 </div>

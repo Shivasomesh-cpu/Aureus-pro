@@ -32,32 +32,32 @@ const TransactionItem: React.FC<{
 
   return (
     <li
-      className="flex items-center justify-between p-3.5 md:p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.07] hover:border-white/15 transition-all duration-300 group relative overflow-hidden animate-fade-in-up"
+      className="flex items-center justify-between p-3.5 md:p-4 rounded-xl bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all duration-200 group relative overflow-hidden animate-fade-in-up"
       style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}
     >
       {/* Left accent bar */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'} opacity-60 group-hover:opacity-100 transition-opacity`}></div>
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'} opacity-80 group-hover:opacity-100 transition-opacity`}></div>
 
       <div className="flex items-center space-x-3 pl-2 min-w-0 flex-1">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-sm text-gray-200 group-hover:text-white transition-colors truncate">{transaction.description}</p>
+            <p className="font-semibold text-sm text-slate-800 group-hover:text-slate-900 transition-colors truncate">{transaction.description}</p>
             {transaction.aiGenerated && (
-              <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/20 font-bold uppercase tracking-wider">
+              <span className="text-[8px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200 font-bold uppercase tracking-wider">
                 Demo
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">{formatDate(transaction.date)}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{formatDate(transaction.date)}</p>
         </div>
       </div>
 
       <div className="flex items-center space-x-3 flex-shrink-0">
         {transaction.notes && (
           <div className="relative group/note">
-            <InfoIcon className="w-4 h-4 text-gray-500 hover:text-gray-300 transition-colors cursor-help" />
-            <div className="absolute bottom-full mb-2 right-0 w-56 bg-slate-900 border border-white/10 p-3 rounded-lg shadow-xl opacity-0 group-hover/note:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
-              <p className="text-xs text-gray-300 leading-relaxed">{transaction.notes}</p>
+            <InfoIcon className="w-4 h-4 text-slate-400 hover:text-slate-600 transition-colors cursor-help" />
+            <div className="absolute bottom-full mb-2 right-0 w-56 bg-slate-900 border border-slate-800 p-3 rounded-lg shadow-xl opacity-0 group-hover/note:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
+              <p className="text-xs text-slate-200 leading-relaxed">{transaction.notes}</p>
             </div>
           </div>
         )}
@@ -66,16 +66,16 @@ const TransactionItem: React.FC<{
           {transaction.category}
         </span>
 
-        <p className={`font-bold text-sm md:text-base tabular-nums ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
+        <p className={`font-bold text-sm md:text-base tabular-nums ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
           {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
         </p>
 
         {/* Action buttons — slide in on hover */}
         <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0">
-          <button onClick={() => onEdit(transaction)} className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors" aria-label="Edit">
+          <button onClick={() => onEdit(transaction)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" aria-label="Edit">
             <EditIcon className="w-4 h-4" />
           </button>
-          <button onClick={() => onDelete(transaction.id)} className="p-1.5 text-gray-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors" aria-label="Delete">
+          <button onClick={() => onDelete(transaction.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" aria-label="Delete">
             <TrashIcon className="w-4 h-4" />
           </button>
         </div>
@@ -135,42 +135,42 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onEdit,
   };
 
   return (
-    <div className="glass-premium p-5 md:p-6 rounded-2xl w-full">
+    <div className="glass-premium p-5 md:p-6 rounded-2xl w-full bg-white border border-slate-200/80 shadow-xs">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 border-b border-slate-100 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-white">Transaction History</h3>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-300 tabular-nums">
+            <h3 className="text-lg font-bold text-slate-900">Transaction History</h3>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 tabular-nums">
               {filteredTransactions.length} of {transactions.length}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
-            <span>In: <strong className="text-emerald-400 tabular-nums">+{formatCurrency(filteredIncome)}</strong></span>
+          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+            <span>In: <strong className="text-emerald-600 tabular-nums">+{formatCurrency(filteredIncome)}</strong></span>
             <span>•</span>
-            <span>Out: <strong className="text-rose-400 tabular-nums">-{formatCurrency(filteredExpense)}</strong></span>
+            <span>Out: <strong className="text-rose-600 tabular-nums">-{formatCurrency(filteredExpense)}</strong></span>
           </div>
         </div>
 
         {/* Actions & Filters */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {/* Segmented Type Controller */}
-          <div className="flex items-center bg-slate-900/80 rounded-xl border border-white/10 p-0.5">
+          <div className="flex items-center bg-slate-100 rounded-xl border border-slate-200/80 p-0.5">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${filterType === 'all' ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${filterType === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
             >
               All
             </button>
             <button
               onClick={() => setFilterType(TransactionType.INCOME)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${filterType === TransactionType.INCOME ? 'bg-emerald-500/20 text-emerald-300' : 'text-gray-400 hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${filterType === TransactionType.INCOME ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
             >
               Income
             </button>
             <button
               onClick={() => setFilterType(TransactionType.EXPENSE)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${filterType === TransactionType.EXPENSE ? 'bg-rose-500/20 text-rose-300' : 'text-gray-400 hover:text-white'}`}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${filterType === TransactionType.EXPENSE ? 'bg-white text-rose-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
             >
               Expenses
             </button>
@@ -180,7 +180,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onEdit,
           <button
             onClick={handleExportCSV}
             title="Export filtered transactions to CSV"
-            className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 transition-colors"
           >
             <DocumentArrowDownIcon className="w-4 h-4" />
           </button>
@@ -191,10 +191,10 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onEdit,
       <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-3 custom-scrollbar">
         <button
           onClick={() => setFilterCategory('all')}
-          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
+          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
             filterCategory === 'all'
-              ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300'
-              : 'bg-white/[0.03] border border-white/5 text-gray-400 hover:text-gray-200 hover:bg-white/[0.06]'
+              ? 'bg-amber-100 border border-amber-300 text-amber-800'
+              : 'bg-slate-100 border border-slate-200/60 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
           All Categories
@@ -203,10 +203,10 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onEdit,
           <button
             key={cat}
             onClick={() => setFilterCategory(cat)}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
               filterCategory === cat
-                ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300'
-                : 'bg-white/[0.03] border border-white/5 text-gray-400 hover:text-gray-200 hover:bg-white/[0.06]'
+                ? 'bg-amber-100 border border-amber-300 text-amber-800'
+                : 'bg-slate-100 border border-slate-200/60 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
             }`}
           >
             {cat}
@@ -221,12 +221,12 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onEdit,
           placeholder="Search by description, notes, category, or amount..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-4 pr-9 py-2 bg-white/5 border border-white/10 rounded-xl text-xs md:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-amber-500/30 focus:border-amber-500/30 input-glow transition-all hover:bg-white/[0.07]"
+          className="w-full pl-4 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all"
         />
         {searchTerm && (
           <button
             onClick={() => setSearchTerm('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white p-1 transition-colors text-xs"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 transition-colors text-xs font-bold"
             title="Clear search"
           >
             ✕
@@ -245,15 +245,15 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onEdit,
         </div>
       ) : (
         <div className="text-center py-12 flex flex-col items-center justify-center">
-          <div className="w-12 h-12 bg-white/[0.03] rounded-full flex items-center justify-center mb-3 border border-white/5">
-            <InfoIcon className="w-6 h-6 text-gray-500" />
+          <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 border border-slate-200">
+            <InfoIcon className="w-6 h-6 text-slate-400" />
           </div>
-          <p className="text-gray-400 text-sm font-semibold">No transactions match your criteria</p>
-          <p className="text-gray-600 text-xs mt-1">Try resetting the category filter or clearing your search phrase.</p>
+          <p className="text-slate-700 text-sm font-bold">No transactions match your criteria</p>
+          <p className="text-slate-500 text-xs mt-1">Try resetting the category filter or clearing your search phrase.</p>
           {(searchTerm || filterCategory !== 'all' || filterType !== 'all') && (
             <button
               onClick={() => { setSearchTerm(''); setFilterCategory('all'); setFilterType('all'); }}
-              className="mt-3 px-3 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs rounded-lg hover:bg-amber-500/25 transition-all font-semibold"
+              className="mt-3 px-3 py-1 bg-amber-100 border border-amber-300 text-amber-800 text-xs rounded-lg hover:bg-amber-200 transition-all font-bold"
             >
               Reset Filters
             </button>

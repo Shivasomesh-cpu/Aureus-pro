@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Transaction, TransactionType, Budget, SavingsGoal, RecurringTransaction, Debt, Subscription, FinancialHealthScore, Alert, BehavioralProfile, AutonomousBudgetTuning, ProactiveHealthOptimization } from './types';
-import { getTransactions, saveTransactions, getBudgets, saveBudgets, getSavingsGoals, saveSavingsGoals, getRecurringTransactions, saveRecurringTransactions, getDebts, saveDebts, getSubscriptions, saveSubscriptions, getHealthMetrics, saveHealthMetrics, getBehavioralProfile, saveBehavioralProfile, getBudgetTuning, saveBudgetTuning, getHealthOptimization, saveHealthOptimization } from './services/storageService';
-import { SettingsProvider } from './contexts/SettingsContext';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Transaction, TransactionType, Budget, SavingsGoal, RecurringTransaction, Debt, Subscription, FinancialHealthScore, Alert, BehavioralProfile, AutonomousBudgetTuning, ProactiveHealthOptimization, BudgetTuningRecommendation, FinancialPlan } from './types';
+import { getTransactions, saveTransactions, getBudgets, saveBudgets, getSavingsGoals, saveSavingsGoals, getRecurringTransactions, saveRecurringTransactions, getDebts, saveDebts, getSubscriptions, saveSubscriptions, getHealthMetrics, saveHealthMetrics, getBehavioralProfile, saveBehavioralProfile, getBudgetTuning, saveBudgetTuning, getHealthOptimization, saveHealthOptimization, getFinancialPlan, saveFinancialPlan } from './services/storageService';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { ToastProvider, useToast } from './contexts/ToastContext';
+import ToastContainer from './components/ToastContainer';
 import Header from './components/Header';
 import SummaryCard from './components/SummaryCard';
 import TransactionList from './components/TransactionList';
@@ -16,25 +18,33 @@ import SavingsGoals from './components/SavingsGoals';
 import RecurringManager from './components/RecurringManager';
 import FinancialHealthWidget from './components/FinancialHealthWidget';
 import DebtManager from './components/DebtManager';
-import AlertsWidget from './components/AlertsWidget';
-import DeepAnalysisWidget from './components/DeepAnalysisWidget';
-import BudgetTuningWidget from './components/BudgetTuningWidget';
-import HealthOptimizationWidget from './components/HealthOptimizationWidget';
 import AIIntelligencePage from './components/AIIntelligencePage';
+import CommandPalette from './components/CommandPalette';
+import BankStatementUploader from './components/BankStatementUploader';
+import GoalsConfigurator from './components/GoalsConfigurator';
+import FinancialPlanPage from './components/FinancialPlanPage';
 import { detectSubscriptions, generateAllAlerts, dismissAlert, snoozeAlert } from './services/alertService';
 import { calculateFinancialHealthScore } from './services/healthScoreService';
 import { generateBehavioralProfile } from './services/deepAnalysisEngine';
 import { generateBudgetTuning } from './services/autonomousBudgetTuner';
 import { generateHealthOptimization } from './services/proactiveHealthOptimizer';
 import { generateDemoData, clearData } from './utils/dataSeeder';
+import { useLenis } from './hooks/useLenis';
+import { fireConfetti } from './utils/confetti';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { currency, formatCurrency } = useSettings();
+  const { showToast } = useToast();
+
+  // Activate Lenis buttery-smooth scrolling engine across the application
+  useLenis(true);
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
 
-  // New state for advanced features
+  // State for advanced features
   const [debts, setDebts] = useState<Debt[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [healthScore, setHealthScore] = useState<FinancialHealthScore | null>(null);
@@ -44,14 +54,24 @@ const App: React.FC = () => {
   const [behavioralProfile, setBehavioralProfile] = useState<BehavioralProfile | null>(null);
   const [budgetTuning, setBudgetTuning] = useState<AutonomousBudgetTuning | null>(null);
   const [healthOptimization, setHealthOptimization] = useState<ProactiveHealthOptimization | null>(null);
+  const [financialPlan, setFinancialPlan] = useState<FinancialPlan | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const hasInitialized = useRef(false);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
+  const [isGoalsModalOpen, setIsGoalsModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'reports' | 'ai'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'reports' | 'ai' | 'plan'>('dashboard');
+  const [aiSelectedTab, setAiSelectedTab] = useState<string>('all');
 
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const initData = async () => {
       let txs = await getTransactions();
       let bgs = getBudgets();
@@ -59,24 +79,8 @@ const App: React.FC = () => {
       let recs = getRecurringTransactions();
       let dts = getDebts();
       let subs = getSubscriptions();
-
-      // If user has no transactions at all (first visit or wiped state), seed realistic multi-month scenario
-      if (!txs || txs.length === 0) {
-        const demo = generateDemoData('USD');
-        await saveTransactions(demo.transactions);
-        saveBudgets(demo.budgets);
-        saveSavingsGoals(demo.savingsGoals);
-        saveRecurringTransactions(demo.recurringTransactions);
-        saveDebts(demo.debts);
-        saveSubscriptions(demo.subscriptions);
-
-        txs = demo.transactions;
-        bgs = demo.budgets;
-        goals = demo.savingsGoals;
-        recs = demo.recurringTransactions;
-        dts = demo.debts;
-        subs = demo.subscriptions;
-      }
+      const savedPlan = getFinancialPlan();
+      setFinancialPlan(savedPlan);
 
       setTransactions(txs);
       setBudgets(bgs);
@@ -85,23 +89,25 @@ const App: React.FC = () => {
       setDebts(dts);
       setSubscriptions(subs);
 
-      const score = calculateFinancialHealthScore(txs, dts, goals);
-      setHealthScore(score);
-      saveHealthMetrics(score);
+      if (txs.length > 0) {
+        const score = calculateFinancialHealthScore(txs, dts, goals, savedPlan);
+        setHealthScore(score);
+        saveHealthMetrics(score);
+      }
 
-      const profile = generateBehavioralProfile(txs, goals);
+      const profile = txs.length ? generateBehavioralProfile(txs, goals) : null;
       if (profile) {
         setBehavioralProfile(profile);
         saveBehavioralProfile(profile);
       }
 
-      const tuning = generateBudgetTuning(txs, bgs);
+      const tuning = txs.length ? generateBudgetTuning(txs, bgs) : null;
       if (tuning) {
         setBudgetTuning(tuning);
         saveBudgetTuning(tuning);
       }
 
-      const opt = generateHealthOptimization(txs, bgs, dts, goals, score);
+      const opt = txs.length ? generateHealthOptimization(txs, bgs, dts, goals, calculateFinancialHealthScore(txs, dts, goals, savedPlan)) : null;
       if (opt) {
         setHealthOptimization(opt);
         saveHealthOptimization(opt);
@@ -111,6 +117,7 @@ const App: React.FC = () => {
       setAlerts(initialAlerts);
 
       await checkRecurringTransactions();
+      setIsDataLoaded(true);
     };
 
     initData();
@@ -123,8 +130,7 @@ const App: React.FC = () => {
       updateAlerts();
       updateAIEngines();
     }
-  }, [transactions, debts, savingsGoals, recurringTransactions, subscriptions, budgets]);
-
+  }, [transactions, debts, savingsGoals, recurringTransactions, subscriptions, budgets, financialPlan]);
 
   const checkRecurringTransactions = async () => {
     const recs = getRecurringTransactions();
@@ -134,7 +140,6 @@ const App: React.FC = () => {
 
     const updatedRecs = recs.map(rec => {
       if (rec.isActive && rec.nextDueDate <= today) {
-        // Create transaction
         newTransactions.push({
           id: crypto.randomUUID(),
           type: rec.type,
@@ -145,7 +150,6 @@ const App: React.FC = () => {
         });
         newTransactionsFound = true;
 
-        // Update next due date
         const nextDate = new Date(rec.nextDueDate);
         if (rec.frequency === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
         if (rec.frequency === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
@@ -163,20 +167,12 @@ const App: React.FC = () => {
       await saveTransactions(allTransactions);
       setRecurringTransactions(updatedRecs);
       saveRecurringTransactions(updatedRecs);
-      // Optional: Notify user
-      console.log("Processed recurring transactions");
     }
-  };
-
-  const updateSubscriptions = () => {
-    const detected = detectSubscriptions(transactions);
-    setSubscriptions(detected);
-    saveSubscriptions(detected);
   };
 
   const updateHealthScore = () => {
     if (transactions.length > 0) {
-      const score = calculateFinancialHealthScore(transactions, debts, savingsGoals);
+      const score = calculateFinancialHealthScore(transactions, debts, savingsGoals, financialPlan);
       setHealthScore(score);
       saveHealthMetrics(score);
     }
@@ -190,21 +186,18 @@ const App: React.FC = () => {
   };
 
   const updateAIEngines = () => {
-    // Deep Analysis Engine
     const profile = generateBehavioralProfile(transactions, savingsGoals);
     if (profile) {
       setBehavioralProfile(profile);
       saveBehavioralProfile(profile);
     }
 
-    // Autonomous Budget Tuner
     const tuning = generateBudgetTuning(transactions, budgets);
     if (tuning) {
       setBudgetTuning(tuning);
       saveBudgetTuning(tuning);
     }
 
-    // Proactive Health Optimizer
     const optimization = generateHealthOptimization(transactions, budgets, debts, savingsGoals, healthScore);
     if (optimization) {
       setHealthOptimization(optimization);
@@ -212,7 +205,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleApplyBudgetTuning = (recommendations: any[]) => {
+  const handleApplyBudgetTuning = (recommendations: BudgetTuningRecommendation[]) => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     let updatedBudgets = [...budgets];
 
@@ -234,6 +227,12 @@ const App: React.FC = () => {
 
     setBudgets(updatedBudgets);
     saveBudgets(updatedBudgets);
+
+    showToast({
+      type: 'success',
+      title: 'Autonomous Budgets Rebalanced',
+      message: `Adjusted limits across ${recommendations.length} categories (+4 pts projected health).`,
+    });
   };
 
   const handleToggleHealthAction = (actionId: string) => {
@@ -246,6 +245,16 @@ const App: React.FC = () => {
     };
     setHealthOptimization(updated);
     saveHealthOptimization(updated);
+
+    const action = healthOptimization.actions.find(a => a.id === actionId);
+    if (action && !action.isCompleted) {
+      fireConfetti({ count: 40 });
+      showToast({
+        type: 'success',
+        title: 'Action Step Completed',
+        message: action.title,
+      });
+    }
   };
 
   const handleDismissAlert = (alertId: string) => {
@@ -254,25 +263,72 @@ const App: React.FC = () => {
 
   const handleSnoozeAlert = (alertId: string, days: number) => {
     setAlerts(prev => snoozeAlert(prev, alertId, days));
+    showToast({
+      type: 'info',
+      title: 'Alert Snoozed',
+      message: `Reminder deferred for ${days} days.`,
+    });
   };
-
-
 
   // Savings Goals Handlers
   const handleSaveGoal = (goal: SavingsGoal) => {
     const updated = [...savingsGoals, goal];
     setSavingsGoals(updated);
     saveSavingsGoals(updated);
+    showToast({
+      type: 'success',
+      title: 'Target Initialized',
+      message: `Goal "${goal.name}" created (${formatCurrency(goal.targetAmount)}).`,
+    });
   };
+
   const handleUpdateGoal = (goal: SavingsGoal) => {
+    const previousGoal = savingsGoals.find(existingGoal => existingGoal.id === goal.id);
     const updated = savingsGoals.map(g => g.id === goal.id ? goal : g);
     setSavingsGoals(updated);
     saveSavingsGoals(updated);
+
+    if (goal.currentAmount >= goal.targetAmount && (previousGoal?.currentAmount ?? 0) < goal.targetAmount) {
+      fireConfetti({ count: 100 });
+      showToast({
+        type: 'success',
+        title: '🎉 Target Achieved!',
+        message: `Congratulations! You've completely funded "${goal.name}".`,
+        duration: 5000,
+      });
+    } else {
+      showToast({
+        type: 'info',
+        title: 'Savings Progress Saved',
+        message: `${goal.name}: ${formatCurrency(goal.currentAmount)} of ${formatCurrency(goal.targetAmount)}`,
+      });
+    }
   };
+
   const handleDeleteGoal = (id: string) => {
     const updated = savingsGoals.filter(g => g.id !== id);
     setSavingsGoals(updated);
     saveSavingsGoals(updated);
+  };
+
+  const handleImportStatementTransactions = async (importedTxs: Transaction[]) => {
+    const updated = [...importedTxs, ...transactions];
+    setTransactions(updated);
+    await saveTransactions(updated);
+    setIsStatementModalOpen(false);
+    setCurrentView('dashboard');
+    fireConfetti({ count: 60 });
+    showToast({
+      type: 'success',
+      title: 'Bank Statement Ingested',
+      message: `Successfully analyzed and merged ${importedTxs.length} statement records into Aureus!`,
+    });
+  };
+
+  const handleSaveFinancialPlan = (plan: FinancialPlan) => {
+    setFinancialPlan(plan);
+    saveFinancialPlan(plan);
+    showToast({ type: 'success', title: 'Financial plan saved', message: 'Your goals and investment assumptions are stored in this browser.' });
   };
 
   // Recurring Handlers
@@ -280,7 +336,13 @@ const App: React.FC = () => {
     const updated = [...recurringTransactions, rec];
     setRecurringTransactions(updated);
     saveRecurringTransactions(updated);
+    showToast({
+      type: 'success',
+      title: 'Recurring Rule Added',
+      message: `${rec.description} (${rec.frequency})`,
+    });
   };
+
   const handleDeleteRecurring = (id: string) => {
     const updated = recurringTransactions.filter(r => r.id !== id);
     setRecurringTransactions(updated);
@@ -292,17 +354,28 @@ const App: React.FC = () => {
     const updated = [...debts, debt];
     setDebts(updated);
     saveDebts(updated);
+    showToast({
+      type: 'info',
+      title: 'Debt Account Configured',
+      message: `${debt.name} added to Avalanche schedule.`,
+    });
   };
+
   const handleDeleteDebt = (id: string) => {
     const updated = debts.filter(d => d.id !== id);
     setDebts(updated);
     saveDebts(updated);
+    showToast({
+      type: 'info',
+      title: 'Debt Account Removed',
+      message: 'Payoff timelines recalculated.',
+    });
   };
 
-
-  // Reactive Demo Data Loader (Zero reload flicker)
-  const handleLoadDemoData = useCallback((currency = 'USD') => {
-    const demo = generateDemoData(currency);
+  // Reactive Demo Data Loader
+  const handleLoadDemoData = useCallback((targetCurrency?: string) => {
+    const activeCurr = targetCurrency || currency || 'USD';
+    const demo = generateDemoData(activeCurr);
     saveTransactions(demo.transactions);
     saveBudgets(demo.budgets);
     saveSavingsGoals(demo.savingsGoals);
@@ -317,7 +390,7 @@ const App: React.FC = () => {
     setDebts(demo.debts);
     setSubscriptions(demo.subscriptions);
 
-    const score = calculateFinancialHealthScore(demo.transactions, demo.debts, demo.savingsGoals);
+    const score = calculateFinancialHealthScore(demo.transactions, demo.debts, demo.savingsGoals, financialPlan);
     setHealthScore(score);
     saveHealthMetrics(score);
 
@@ -335,7 +408,14 @@ const App: React.FC = () => {
 
     const newAlerts = generateAllAlerts(demo.transactions, demo.recurringTransactions, demo.subscriptions, demo.debts, []);
     setAlerts(newAlerts);
-  }, []);
+
+    showToast({
+      type: 'success',
+      title: 'Realistic Dataset Loaded',
+      message: `Demo financial data loaded in ${activeCurr}, replacing your previous local data.`,
+      duration: 3500,
+    });
+  }, [currency, financialPlan, showToast]);
 
   const handleResetData = useCallback(() => {
     clearData();
@@ -350,7 +430,15 @@ const App: React.FC = () => {
     setBudgetTuning(null);
     setHealthOptimization(null);
     setAlerts([]);
-  }, []);
+    setFinancialPlan(null);
+    setCurrentView('dashboard');
+
+    showToast({
+      type: 'warning',
+      title: 'Storage Wiped',
+      message: 'All local data was cleared from browser storage.',
+    });
+  }, [showToast]);
 
   const handleSaveTransaction = useCallback((transaction: Transaction) => {
     const existingIndex = transactions.findIndex(t => t.id === transaction.id);
@@ -367,7 +455,13 @@ const App: React.FC = () => {
     setTransactions(updatedTransactions);
     saveTransactions(updatedTransactions);
     setTransactionToEdit(null);
-  }, [transactions]);
+
+    showToast({
+      type: 'success',
+      title: existingIndex > -1 ? 'Transaction Updated' : 'Transaction Logged',
+      message: `${transaction.description}: ${formatCurrency(transaction.amount)}`,
+    });
+  }, [transactions, formatCurrency, showToast]);
 
   const handleAddTransactionFromNLP = useCallback((transactionData: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
@@ -382,8 +476,13 @@ const App: React.FC = () => {
       const updatedTransactions = transactions.filter(t => t.id !== id);
       setTransactions(updatedTransactions);
       saveTransactions(updatedTransactions);
+      showToast({
+        type: 'info',
+        title: 'Transaction Deleted',
+        message: 'Records and cash flow metrics updated.',
+      });
     }
-  }, [transactions]);
+  }, [transactions, showToast]);
 
   const handleSaveBudget = useCallback((newBudget: Omit<Budget, 'id' | 'month'>) => {
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -403,7 +502,13 @@ const App: React.FC = () => {
       setBudgets(updatedBudgets);
       saveBudgets(updatedBudgets);
     }
-  }, [budgets]);
+
+    showToast({
+      type: 'success',
+      title: 'Budget Allocation Set',
+      message: `${newBudget.category}: ${formatCurrency(newBudget.amount)}/mo`,
+    });
+  }, [budgets, formatCurrency, showToast]);
 
   const handleDeleteBudget = useCallback((id: string) => {
     const updatedBudgets = budgets.filter(b => b.id !== id);
@@ -424,7 +529,7 @@ const App: React.FC = () => {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setTransactionToEdit(null);
-  }
+  };
 
   const { totalIncome, totalExpense, balance, incomeTrend, expenseTrend } = useMemo(() => {
     const now = new Date();
@@ -459,7 +564,7 @@ const App: React.FC = () => {
     const calculateTrend = (current: number, previous: number) => {
       if (previous === 0) return current > 0 ? Infinity : 0;
       return ((current - previous) / previous) * 100;
-    }
+    };
 
     return {
       totalIncome: allTimeIncome,
@@ -470,22 +575,25 @@ const App: React.FC = () => {
     };
   }, [transactions]);
 
-  return (
-    <SettingsProvider>
-      <div className="min-h-screen text-gray-100 transition-colors duration-300">
-        {/* Subtle noise texture overlay */}
-        <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.08] pointer-events-none z-0"></div>
-        {/* Ambient background glows */}
-        <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-500/[0.04] rounded-full blur-[120px] pointer-events-none z-0"></div>
-        <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary-500/[0.06] rounded-full blur-[150px] pointer-events-none z-0"></div>
-        <div className="fixed top-[20%] right-[10%] w-[30%] h-[30%] bg-violet-600/[0.03] rounded-full blur-[100px] pointer-events-none z-0"></div>
+  if (!isDataLoaded) {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500" role="status" aria-live="polite">Loading your local financial data…</div>;
+  }
 
-        <div className="relative z-10">
+  return (
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 transition-colors duration-300">
+      {/* Ambient background glows */}
+      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-500/[0.04] rounded-full blur-[120px] pointer-events-none z-0"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary-500/[0.04] rounded-full blur-[150px] pointer-events-none z-0"></div>
+
+      <div className="relative z-10">
           <Header
             currentView={currentView}
             onChangeView={setCurrentView}
             onManageBudgets={() => setIsBudgetModalOpen(true)}
             onManageDebts={() => setIsDebtModalOpen(true)}
+            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+            onOpenStatementUpload={() => setIsStatementModalOpen(true)}
+            onOpenGoals={() => setIsGoalsModalOpen(true)}
             alerts={alerts}
             onDismissAlert={handleDismissAlert}
             onSnoozeAlert={handleSnoozeAlert}
@@ -496,7 +604,14 @@ const App: React.FC = () => {
           />
 
           <main className={`container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 ${currentView === 'ai' ? 'max-w-screen-2xl' : 'max-w-7xl'}`}>
-            {currentView === 'reports' ? (
+            {currentView === 'plan' ? (
+              <FinancialPlanPage
+                plan={financialPlan}
+                goals={savingsGoals}
+                onSave={handleSaveFinancialPlan}
+                onManageGoals={() => setIsGoalsModalOpen(true)}
+              />
+            ) : currentView === 'reports' ? (
               <div className="animate-fade-in-up">
                 <Reports transactions={transactions} />
               </div>
@@ -514,10 +629,28 @@ const App: React.FC = () => {
                 healthScore={healthScore}
                 onApplyTuning={handleApplyBudgetTuning}
                 onToggleAction={handleToggleHealthAction}
+                initialTab={aiSelectedTab}
+                onOpenStatementUpload={() => setIsStatementModalOpen(true)}
               />
             ) : (
               <div className="space-y-8 animate-fade-in-up">
-
+                {transactions.length === 0 ? (
+                  <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                    <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+                      <div className="max-w-2xl">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">A clear start</p>
+                        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Make this dashboard yours</h1>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">Add the goals you’re saving for, your retirement timeline, and any monthly SIP investments. Import a statement or add transactions whenever you’re ready. Nothing is prefilled with made-up finances.</p>
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                        <button onClick={() => setCurrentView('plan')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Set up my financial plan</button>
+                        <button onClick={() => setIsStatementModalOpen(true)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50">Import a statement</button>
+                        <button onClick={handleOpenForm} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50">Add a transaction</button>
+                      </div>
+                    </div>
+                  </section>
+                ) : (
+                  <>
                 <AIInsightsWidget transactions={transactions} budgets={budgets} />
 
                 <div className="max-w-3xl mx-auto">
@@ -525,27 +658,26 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <SummaryCard title="Total Income" amount={totalIncome} colorClass="text-emerald-400" trend={incomeTrend} />
-                  <SummaryCard title="Total Expense" amount={totalExpense} colorClass="text-rose-400" trend={expenseTrend} />
-                  <SummaryCard title="Balance" amount={balance} colorClass={balance >= 0 ? 'text-blue-400' : 'text-rose-400'} />
+                  <SummaryCard title="Total Income" amount={totalIncome} colorClass="text-emerald-600" trend={incomeTrend} />
+                  <SummaryCard title="Total Expense" amount={totalExpense} colorClass="text-rose-600" trend={expenseTrend} />
+                  <SummaryCard title="Balance" amount={balance} colorClass={balance >= 0 ? 'text-slate-900' : 'text-rose-600'} />
                 </div>
 
                 {/* Main Dashboard Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start relative">
-
                   {/* Left Column: Wealth & Health (4 Cols) */}
                   <div className="lg:col-span-4 space-y-8 order-2 lg:order-1">
                     <section>
-                      <h2 className="text-[10px] font-bold text-amber-500/70 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500/50 animate-breathe"></span>
+                      <h2 className="text-[10px] font-bold text-amber-700 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-breathe"></span>
                         Financial Wellness
                       </h2>
                       <FinancialHealthWidget healthScore={healthScore} />
                     </section>
 
                     <section>
-                      <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary-500/50 animate-breathe"></span>
+                      <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-breathe"></span>
                         Budget Allocation
                       </h2>
                       <BudgetProgress budgets={budgets} transactions={transactions} />
@@ -555,8 +687,8 @@ const App: React.FC = () => {
                   {/* Center Column: Activities (5 Cols) */}
                   <div className="lg:col-span-5 space-y-8 order-1 lg:order-2">
                     <section>
-                      <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 animate-breathe"></span>
+                      <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-breathe"></span>
                         Recent Activities
                       </h2>
                       <TransactionList transactions={transactions} onEdit={handleEditTransaction} onDelete={handleDeleteTransaction} />
@@ -566,8 +698,8 @@ const App: React.FC = () => {
                   {/* Right Column: Planning & Goals (3 Cols) */}
                   <div className="lg:col-span-3 space-y-8 order-3">
                     <section>
-                      <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-violet-500/50 animate-breathe"></span>
+                      <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-breathe"></span>
                         Future Targets
                       </h2>
                       <SavingsGoals
@@ -579,8 +711,8 @@ const App: React.FC = () => {
                     </section>
 
                     <section>
-                      <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500/50 animate-breathe"></span>
+                      <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-breathe"></span>
                         Recurring Bills
                       </h2>
                       <RecurringManager
@@ -591,42 +723,83 @@ const App: React.FC = () => {
                     </section>
                   </div>
                 </div>
+                  </>
+                )}
               </div>
             )}
           </main>
 
           <button
             onClick={handleOpenForm}
-            className="fixed bottom-8 right-8 bg-gradient-to-tr from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white p-4 rounded-2xl shadow-xl shadow-amber-600/25 transition-all duration-300 hover:scale-110 hover:shadow-amber-500/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 ring-offset-gray-900 group animate-pulse-glow"
+            className="fixed bottom-8 right-8 bg-gradient-to-tr from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white p-4 rounded-2xl shadow-xl shadow-amber-600/25 transition-all duration-300 hover:scale-110 hover:shadow-amber-500/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 ring-offset-white group animate-pulse-glow z-30"
             aria-label="Add new transaction manually"
           >
             <PlusIcon className="w-7 h-7 group-hover:rotate-90 transition-transform duration-300" />
           </button>
-
-          <TransactionForm
-            isOpen={isFormOpen}
-            onClose={handleCloseForm}
-            onSave={handleSaveTransaction}
-            transactionToEdit={transactionToEdit}
-          />
-
-          <BudgetManager
-            isOpen={isBudgetModalOpen}
-            onClose={() => setIsBudgetModalOpen(false)}
-            onSave={handleSaveBudget}
-            onDelete={handleDeleteBudget}
-            existingBudgets={budgets}
-          />
-
-          <DebtManager
-            debts={debts}
-            onAddDebt={handleAddDebt}
-            onDeleteDebt={handleDeleteDebt}
-            isOpen={isDebtModalOpen}
-            onClose={() => setIsDebtModalOpen(false)}
-          />
-        </div>
       </div>
+
+      <BankStatementUploader
+        isOpen={isStatementModalOpen}
+        onClose={() => setIsStatementModalOpen(false)}
+        onImportTransactions={handleImportStatementTransactions}
+      />
+
+      <GoalsConfigurator
+        isOpen={isGoalsModalOpen}
+        onClose={() => setIsGoalsModalOpen(false)}
+        goals={savingsGoals}
+        transactions={transactions}
+        onAddGoal={handleSaveGoal}
+        onUpdateGoal={handleUpdateGoal}
+        onDeleteGoal={handleDeleteGoal}
+      />
+
+      <TransactionForm
+        isOpen={isFormOpen}
+        onClose={handleCloseForm}
+        onSave={handleSaveTransaction}
+        transactionToEdit={transactionToEdit}
+      />
+
+      <BudgetManager
+        isOpen={isBudgetModalOpen}
+        onClose={() => setIsBudgetModalOpen(false)}
+        onSave={handleSaveBudget}
+        onDelete={handleDeleteBudget}
+        existingBudgets={budgets}
+      />
+
+      <DebtManager
+        debts={debts}
+        onAddDebt={handleAddDebt}
+        onDeleteDebt={handleDeleteDebt}
+        isOpen={isDebtModalOpen}
+        onClose={() => setIsDebtModalOpen(false)}
+      />
+
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onChangeView={(v) => {
+          setCurrentView(v);
+        }}
+        onOpenNewTransaction={handleOpenForm}
+        onOpenBudgets={() => setIsBudgetModalOpen(true)}
+        onOpenDebts={() => setIsDebtModalOpen(true)}
+        onSelectAITab={(tab) => setAiSelectedTab(tab)}
+      />
+
+      <ToastContainer />
+    </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <SettingsProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </SettingsProvider>
   );
 };

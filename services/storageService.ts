@@ -1,7 +1,26 @@
-import { Transaction, Budget, SavingsGoal, RecurringTransaction } from '../types';
+import { Transaction, Budget, SavingsGoal, RecurringTransaction, FinancialPlan } from '../types';
 
 const TRANSACTIONS_KEY = 'expenseTrackerTransactions';
 const BUDGETS_KEY = 'expenseTrackerBudgets';
+const FINANCIAL_PLAN_KEY = 'aureusFinancialPlan';
+
+export const getFinancialPlan = (): FinancialPlan | null => {
+  try {
+    const json = localStorage.getItem(FINANCIAL_PLAN_KEY);
+    return json ? JSON.parse(json) as FinancialPlan : null;
+  } catch (error) {
+    console.error('Failed to parse financial plan', error);
+    return null;
+  }
+};
+
+export const saveFinancialPlan = (plan: FinancialPlan): void => {
+  try {
+    localStorage.setItem(FINANCIAL_PLAN_KEY, JSON.stringify(plan));
+  } catch (error) {
+    console.error('Failed to save financial plan', error);
+  }
+};
 
 // Transactions
 export const getTransactions = (): Transaction[] => {
