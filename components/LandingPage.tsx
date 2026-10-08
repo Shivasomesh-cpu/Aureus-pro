@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useLenis } from '../hooks/useLenis';
 import { GreekPillarIcon } from './icons';
 
@@ -33,6 +34,7 @@ const ParticleField: React.FC = () => {
     let pixelRatio = 1;
     let frame = 0;
     let lastTime = 0;
+    let isInView = true;
     let particles: Particle[] = [];
 
     const render = (time: number) => {
@@ -60,7 +62,7 @@ const ParticleField: React.FC = () => {
             context.beginPath();
             context.moveTo(particle.x, particle.y);
             context.lineTo(other.x, other.y);
-            context.strokeStyle = 'rgba(202, 167, 99, ' + ((1 - distance / 118) * 0.09) + ')';
+            context.strokeStyle = 'rgba(202, 167, 99, ' + ((1 - distance / 118) * 0.055) + ')';
             context.lineWidth = 0.7;
             context.stroke();
           }
@@ -74,7 +76,7 @@ const ParticleField: React.FC = () => {
         context.fill();
       }
 
-      if (!reduceMotion && !document.hidden) {
+      if (!reduceMotion && !document.hidden && isInView) {
         frame = window.requestAnimationFrame(render);
       }
     };
@@ -88,35 +90,49 @@ const ParticleField: React.FC = () => {
       canvas.style.width = width + 'px';
       canvas.style.height = height + 'px';
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      const count = width < 640 ? 24 : 52;
+      const count = width < 640 ? 18 : 34;
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         radius: 0.7 + Math.random() * 1.2,
         speedX: 0.08 + Math.random() * 0.18,
         speedY: (Math.random() - 0.5) * 0.12,
-        opacity: 0.18 + Math.random() * 0.48,
+        opacity: 0.12 + Math.random() * 0.3,
         gold: Math.random() > 0.38,
       }));
       if (reduceMotion) render(0);
-      else if (!frame && !document.hidden) frame = window.requestAnimationFrame(render);
+      else if (!frame && !document.hidden && isInView) frame = window.requestAnimationFrame(render);
     };
 
     const handleVisibility = () => {
       if (document.hidden) {
         window.cancelAnimationFrame(frame);
         frame = 0;
-      } else if (!reduceMotion && !frame) {
+      } else if (!reduceMotion && isInView && !frame) {
         frame = window.requestAnimationFrame(render);
       }
     };
 
+    const intersectionObserver = typeof IntersectionObserver === 'undefined'
+      ? null
+      : new IntersectionObserver(entries => {
+        isInView = entries.some(entry => entry.isIntersecting);
+        if (isInView && !reduceMotion && !document.hidden && !frame) {
+          frame = window.requestAnimationFrame(render);
+        } else if (!isInView) {
+          window.cancelAnimationFrame(frame);
+          frame = 0;
+        }
+      });
+
     resize();
+    intersectionObserver?.observe(section);
     window.addEventListener('resize', resize, { passive: true });
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       window.cancelAnimationFrame(frame);
+      intersectionObserver?.disconnect();
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
@@ -125,12 +141,147 @@ const ParticleField: React.FC = () => {
   return <canvas ref={canvasRef} className="landing-particle-canvas" aria-hidden="true" />;
 };
 
+interface CursorEffectProps {
+  rootRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const CursorEffect: React.FC<CursorEffectProps> = ({ rootRef }) => {
+  const cursorRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const cursor = cursorRef.current;
+    if (!root || !cursor) return;
+
+    const supportsFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!supportsFinePointer || prefersReducedMotion) return;
+
+    let pointerX = 0;
+    let pointerY = 0;
+    let cursorX = 0;
+    let cursorY = 0;
+    let hasPosition = false;
+    let frame = 0;
+    let activeTarget: HTMLElement | null = null;
+    let cursorEnabled = false;
+
+    const enableCursor = () => {
+      if (cursorEnabled) return;
+      document.documentElement.classList.add('aureus-cursor-ready');
+      cursorEnabled = true;
+    };
+
+    const findTarget = (eventTarget: EventTarget | null) => {
+      if (!(eventTarget instanceof Element)) return null;
+      const target = eventTarget.closest('button, a, [role="button"]');
+      return target instanceof HTMLElement && root.contains(target) ? target : null;
+    };
+
+    const updateActiveTarget = (target: HTMLElement | null) => {
+      if (target === activeTarget) return;
+      activeTarget?.style.removeProperty('--cursor-magnet-x');
+      activeTarget?.style.removeProperty('--cursor-magnet-y');
+      activeTarget = target;
+      cursor.dataset.active = target ? 'true' : 'false';
+      if (labelRef.current) {
+        labelRef.current.textContent = target ? target.dataset.cursorLabel || 'OPEN' : '';
+      }
+    };
+
+    const animatePosition = () => {
+      cursorX += (pointerX - cursorX) * 0.22;
+      cursorY += (pointerY - cursorY) * 0.22;
+      cursor.style.transform = 'translate3d(' + cursorX + 'px, ' + cursorY + 'px, 0)';
+
+      if (Math.abs(pointerX - cursorX) > 0.35 || Math.abs(pointerY - cursorY) > 0.35) {
+        frame = window.requestAnimationFrame(animatePosition);
+      } else {
+        cursorX = pointerX;
+        cursorY = pointerY;
+        cursor.style.transform = 'translate3d(' + cursorX + 'px, ' + cursorY + 'px, 0)';
+        frame = 0;
+      }
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+
+      if (!hasPosition) {
+        cursorX = pointerX;
+        cursorY = pointerY;
+        hasPosition = true;
+      }
+
+      const target = findTarget(event.target);
+      updateActiveTarget(target);
+      enableCursor();
+      cursor.dataset.visible = 'true';
+
+      if (target?.hasAttribute('data-cursor-magnetic')) {
+        const bounds = target.getBoundingClientRect();
+        const offsetX = (event.clientX - (bounds.left + bounds.width / 2)) * 0.12;
+        const offsetY = (event.clientY - (bounds.top + bounds.height / 2)) * 0.12;
+        target.style.setProperty('--cursor-magnet-x', Math.max(-7, Math.min(7, offsetX)) + 'px');
+        target.style.setProperty('--cursor-magnet-y', Math.max(-7, Math.min(7, offsetY)) + 'px');
+      }
+
+      if (!frame) frame = window.requestAnimationFrame(animatePosition);
+    };
+
+    const handlePointerLeave = () => {
+      cursor.dataset.visible = 'false';
+      cursor.dataset.active = 'false';
+      cursor.dataset.pressed = 'false';
+      updateActiveTarget(null);
+    };
+
+    const handlePointerDown = () => {
+      cursor.dataset.pressed = 'true';
+    };
+
+    const handlePointerUp = () => {
+      cursor.dataset.pressed = 'false';
+    };
+
+    root.addEventListener('pointermove', handlePointerMove, { passive: true });
+    root.addEventListener('pointerleave', handlePointerLeave);
+    root.addEventListener('pointerdown', handlePointerDown);
+    root.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.documentElement.classList.remove('aureus-cursor-ready');
+      root.removeEventListener('pointermove', handlePointerMove);
+      root.removeEventListener('pointerleave', handlePointerLeave);
+      root.removeEventListener('pointerdown', handlePointerDown);
+      root.removeEventListener('pointerup', handlePointerUp);
+      activeTarget?.style.removeProperty('--cursor-magnet-x');
+      activeTarget?.style.removeProperty('--cursor-magnet-y');
+    };
+  }, [rootRef]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div ref={cursorRef} className="aureus-cursor" aria-hidden="true" data-visible="false">
+      <span className="aureus-cursor-ring"><span ref={labelRef} className="aureus-cursor-label" /></span>
+      <span className="aureus-cursor-dot" />
+    </div>,
+    document.body,
+  );
+};
+
 const LandingPage: React.FC<LandingPageProps> = ({
   onLaunchApp,
   onOpenPlan,
   onOpenStatementUpload,
 }) => {
   const { scrollTo } = useLenis();
+  const landingRootRef = useRef<HTMLDivElement>(null);
 
   const visitSection = (sectionId: string) => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -138,7 +289,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#f7f6f2] text-slate-900">
+    <div ref={landingRootRef} className="aureus-landing min-h-screen bg-[#f7f6f2] text-slate-900">
       <section id="top" className="landing-hero relative isolate overflow-hidden bg-[#08111f] text-white">
         <ParticleField />
         <div className="landing-hero-glow landing-hero-glow-one" aria-hidden="true" />
@@ -149,6 +300,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={() => visitSection('top')}
+              data-cursor-label="HOME"
+              data-cursor-magnetic
               className="group flex items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               aria-label="Aureus home"
             >
@@ -169,6 +322,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onLaunchApp}
+              data-cursor-label="OPEN"
+              data-cursor-magnetic
               className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2.5 text-xs font-bold text-white transition hover:border-amber-200/50 hover:bg-white/10 sm:px-5 sm:text-sm"
             >
               Open workspace <span aria-hidden="true" className="ml-1 text-amber-300">↗</span>
@@ -183,7 +338,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               A thoughtful workspace for your financial life
             </div>
 
-            <h1 className="max-w-2xl font-serif text-[clamp(3.1rem,7.5vw,6.25rem)] font-medium leading-[0.98] tracking-[-0.055em] text-white">
+            <h1 className="max-w-2xl font-serif text-[clamp(3rem,5.5vw,5.25rem)] font-medium leading-[0.98] tracking-[-0.05em] text-white">
               A clearer plan for <span className="landing-gold-text italic">the life you want.</span>
             </h1>
             <p className="mt-7 max-w-xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
@@ -194,13 +349,17 @@ const LandingPage: React.FC<LandingPageProps> = ({
               <button
                 type="button"
                 onClick={onOpenPlan}
-                className="group inline-flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-amber-300 via-amber-200 to-yellow-300 px-6 py-3.5 text-sm font-extrabold text-slate-950 shadow-[0_12px_40px_rgba(217,160,66,.18)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_48px_rgba(217,160,66,.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08111f]"
+                data-cursor-label="PLAN"
+                data-cursor-magnetic
+                className="group inline-flex items-center justify-center gap-3 rounded-full bg-[#e8c68d] px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_8px_28px_rgba(217,160,66,.16)] transition duration-300 hover:bg-[#f0d6a9] hover:shadow-[0_12px_34px_rgba(217,160,66,.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08111f]"
               >
                 Start with your goals <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">→</span>
               </button>
               <button
                 type="button"
                 onClick={() => onOpenStatementUpload()}
+                data-cursor-label="IMPORT"
+                data-cursor-magnetic
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-6 py-3.5 text-sm font-bold text-white transition hover:border-white/30 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
               >
                 Import a statement <span aria-hidden="true" className="text-slate-400">↓</span>
@@ -275,10 +434,6 @@ const LandingPage: React.FC<LandingPageProps> = ({
                 No stock recommendations or live market prices.
               </p>
             </div>
-            <div className="landing-float-chip absolute -left-4 top-[28%] hidden items-center gap-2 rounded-2xl border border-white/10 bg-[#172438]/95 px-3 py-2.5 text-[10px] font-semibold text-slate-200 shadow-xl sm:flex">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-200/10 text-amber-200">✳</span>
-              Start with a goal. Build from there.
-            </div>
           </div>
         </div>
         <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-100/20 to-transparent" aria-hidden="true" />
@@ -299,24 +454,24 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="mt-12 grid gap-4 md:grid-cols-3">
             <article className="landing-card group rounded-[26px] border border-slate-200/80 bg-white p-6 shadow-[0_8px_28px_rgba(15,23,42,.035)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_48px_rgba(15,23,42,.08)] sm:p-7">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-xl text-amber-700">◇</span>
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-xl text-amber-800">◇</span>
               <h3 className="mt-6 font-serif text-2xl font-medium text-slate-950">Plan for your life</h3>
               <p className="mt-3 text-sm leading-6 text-slate-600">Set a retirement horizon, add meaningful goals, and write down the monthly investments you want to track.</p>
               <button type="button" onClick={onOpenPlan} className="mt-6 text-xs font-bold text-amber-800 transition-colors hover:text-amber-600">Build your plan <span aria-hidden="true">→</span></button>
             </article>
 
             <article className="landing-card group rounded-[26px] border border-slate-200/80 bg-white p-6 shadow-[0_8px_28px_rgba(15,23,42,.035)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_48px_rgba(15,23,42,.08)] sm:p-7">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-xl text-sky-700">↗</span>
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl text-slate-700">↗</span>
               <h3 className="mt-6 font-serif text-2xl font-medium text-slate-950">See your cash flow</h3>
               <p className="mt-3 text-sm leading-6 text-slate-600">Import a statement or add transactions yourself. Review the parsed entries before anything is saved.</p>
-              <button type="button" onClick={onOpenStatementUpload} className="mt-6 text-xs font-bold text-sky-800 transition-colors hover:text-sky-600">Import a statement <span aria-hidden="true">→</span></button>
+              <button type="button" onClick={onOpenStatementUpload} className="mt-6 text-xs font-bold text-amber-800 transition-colors hover:text-amber-600">Import a statement <span aria-hidden="true">→</span></button>
             </article>
 
             <article className="landing-card group rounded-[26px] border border-slate-200/80 bg-white p-6 shadow-[0_8px_28px_rgba(15,23,42,.035)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_48px_rgba(15,23,42,.08)] sm:p-7">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-xl text-emerald-700">⌁</span>
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl text-slate-700">⌁</span>
               <h3 className="mt-6 font-serif text-2xl font-medium text-slate-950">Adjust as life changes</h3>
               <p className="mt-3 text-sm leading-6 text-slate-600">Keep budgets, recurring costs, and your savings targets together, then revisit the plan when your priorities shift.</p>
-              <button type="button" onClick={onLaunchApp} className="mt-6 text-xs font-bold text-emerald-800 transition-colors hover:text-emerald-600">Explore the workspace <span aria-hidden="true">→</span></button>
+              <button type="button" onClick={onLaunchApp} className="mt-6 text-xs font-bold text-amber-800 transition-colors hover:text-amber-600">Explore the workspace <span aria-hidden="true">→</span></button>
             </article>
           </div>
         </div>
@@ -328,7 +483,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
             <p className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-amber-700">Start where you are</p>
             <h2 className="mt-4 font-serif text-4xl font-medium leading-tight tracking-tight text-slate-950 sm:text-5xl">A small first step is still a plan.</h2>
             <p className="mt-5 max-w-md text-sm leading-7 text-slate-600">No perfect spreadsheet required. Add what you know now; leave the rest open until you’re ready.</p>
-            <button type="button" onClick={onOpenPlan} className="mt-8 inline-flex items-center gap-3 rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800">
+            <button type="button" onClick={onOpenPlan} data-cursor-label="PLAN" data-cursor-magnetic className="mt-8 inline-flex items-center gap-3 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
               Set up my financial plan <span aria-hidden="true" className="text-amber-300">→</span>
             </button>
           </div>
@@ -365,6 +520,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
           </p>
         </div>
       </footer>
+      <CursorEffect rootRef={landingRootRef} />
     </div>
   );
 };

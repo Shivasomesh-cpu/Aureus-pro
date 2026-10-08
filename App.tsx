@@ -14,7 +14,6 @@ import Reports from './components/Reports';
 import BudgetProgress from './components/BudgetProgress';
 import BudgetManager from './components/BudgetManager';
 import SmartInput from './components/SmartInput';
-import AIInsightsWidget from './components/AIInsightsWidget';
 import SavingsGoals from './components/SavingsGoals';
 import RecurringManager from './components/RecurringManager';
 import FinancialHealthWidget from './components/FinancialHealthWidget';
@@ -38,7 +37,7 @@ const AppContent: React.FC = () => {
   const { showToast } = useToast();
 
   // Activate Lenis buttery-smooth scrolling engine across the application
-  useLenis(true);
+  const { lenis } = useLenis(true);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -67,7 +66,16 @@ const AppContent: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'reports' | 'ai' | 'plan'>('landing');
+  const previousView = useRef(currentView);
   const [aiSelectedTab, setAiSelectedTab] = useState<string>('all');
+
+  useEffect(() => {
+    if (previousView.current === currentView) return;
+    previousView.current = currentView;
+    const immediate = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (lenis) lenis.scrollTo(0, { immediate });
+    else window.scrollTo({ top: 0, behavior: immediate ? 'auto' : 'smooth' });
+  }, [currentView, lenis]);
 
   useEffect(() => {
     if (hasInitialized.current) return;
@@ -581,11 +589,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 transition-colors duration-300">
-      {/* Ambient background glows */}
-      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-500/[0.04] rounded-full blur-[120px] pointer-events-none z-0"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary-500/[0.04] rounded-full blur-[150px] pointer-events-none z-0"></div>
-
+    <div className="min-h-screen bg-[#f7f8f7] text-slate-900">
       <div className="relative z-10">
         {currentView === 'landing' ? (
           <LandingPage
@@ -612,7 +616,7 @@ const AppContent: React.FC = () => {
             debtCount={debts.length}
           />
 
-          <main className={`container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 ${currentView === 'ai' ? 'max-w-screen-2xl' : 'max-w-7xl'}`}>
+          <main key={currentView} className={`app-view-enter container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 ${currentView === 'ai' ? 'max-w-screen-2xl' : 'max-w-7xl'}`}>
             {currentView === 'plan' ? (
               <FinancialPlanPage
                 plan={financialPlan}
@@ -642,9 +646,9 @@ const AppContent: React.FC = () => {
                 onOpenStatementUpload={() => setIsStatementModalOpen(true)}
               />
             ) : (
-              <div className="space-y-8 animate-fade-in-up">
+              <div className="space-y-6">
                 {transactions.length === 0 ? (
-                  <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                  <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white">
                     <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
                       <div className="max-w-2xl">
                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">A clear start</p>
@@ -654,14 +658,11 @@ const AppContent: React.FC = () => {
                       <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
                         <button onClick={() => setCurrentView('plan')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Set up my financial plan</button>
                         <button onClick={() => setIsStatementModalOpen(true)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50">Import a statement</button>
-                        <button onClick={handleOpenForm} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50">Add a transaction</button>
                       </div>
                     </div>
                   </section>
                 ) : (
                   <>
-                <AIInsightsWidget transactions={transactions} budgets={budgets} />
-
                 <div className="max-w-3xl mx-auto">
                   <SmartInput onSave={handleAddTransactionFromNLP} />
                 </div>
@@ -677,17 +678,15 @@ const AppContent: React.FC = () => {
                   {/* Left Column: Wealth & Health (4 Cols) */}
                   <div className="lg:col-span-4 space-y-8 order-2 lg:order-1">
                     <section>
-                      <h2 className="text-[10px] font-bold text-amber-700 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-breathe"></span>
-                        Financial Wellness
+                      <h2 className="mb-3 px-1 text-xs font-semibold text-slate-500">
+                        Financial wellness
                       </h2>
                       <FinancialHealthWidget healthScore={healthScore} />
                     </section>
 
                     <section>
-                      <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-breathe"></span>
-                        Budget Allocation
+                      <h2 className="mb-3 px-1 text-xs font-semibold text-slate-500">
+                        Budgets
                       </h2>
                       <BudgetProgress budgets={budgets} transactions={transactions} />
                     </section>
@@ -696,9 +695,8 @@ const AppContent: React.FC = () => {
                   {/* Center Column: Activities (5 Cols) */}
                   <div className="lg:col-span-5 space-y-8 order-1 lg:order-2">
                     <section>
-                      <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-breathe"></span>
-                        Recent Activities
+                      <h2 className="mb-3 px-1 text-xs font-semibold text-slate-500">
+                        Recent activity
                       </h2>
                       <TransactionList transactions={transactions} onEdit={handleEditTransaction} onDelete={handleDeleteTransaction} />
                     </section>
@@ -707,9 +705,8 @@ const AppContent: React.FC = () => {
                   {/* Right Column: Planning & Goals (3 Cols) */}
                   <div className="lg:col-span-3 space-y-8 order-3">
                     <section>
-                      <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-breathe"></span>
-                        Future Targets
+                      <h2 className="mb-3 px-1 text-xs font-semibold text-slate-500">
+                        Savings goals
                       </h2>
                       <SavingsGoals
                         goals={savingsGoals}
@@ -720,9 +717,8 @@ const AppContent: React.FC = () => {
                     </section>
 
                     <section>
-                      <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-3 px-1 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-breathe"></span>
-                        Recurring Bills
+                      <h2 className="mb-3 px-1 text-xs font-semibold text-slate-500">
+                        Recurring bills
                       </h2>
                       <RecurringManager
                         recurringTransactions={recurringTransactions}
@@ -740,10 +736,10 @@ const AppContent: React.FC = () => {
 
           <button
             onClick={handleOpenForm}
-            className="fixed bottom-8 right-8 bg-gradient-to-tr from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white p-4 rounded-2xl shadow-xl shadow-amber-600/25 transition-all duration-300 hover:scale-110 hover:shadow-amber-500/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 ring-offset-white group animate-pulse-glow z-30"
+            className="fixed bottom-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-950/15 transition duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 sm:bottom-8 sm:right-8"
             aria-label="Add new transaction manually"
           >
-            <PlusIcon className="w-7 h-7 group-hover:rotate-90 transition-transform duration-300" />
+            <PlusIcon className="h-5 w-5" />
           </button>
           </>
         )}

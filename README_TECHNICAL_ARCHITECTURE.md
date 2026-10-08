@@ -87,21 +87,24 @@ graph TB
   * **Serif:** Applied to brand mark "AUREUS".
 
 ### 3.2 View Architecture & Navigation Flow
-Managed in [App.tsx](file:///c:/Users/Veera%20M/Videos/Aureus/App.tsx) via three primary view states:
-1. `'dashboard'` (Default View):
-   * Executive Top Bar: Segmented view navigation, live budget/debt counters, currency switcher, notifications, and instant demo loader.
-   * Top Banner: `AIInsightsWidget` (spending velocity, monthly averages, Monte Carlo preview).
+Managed in App.tsx via landing, dashboard, reports, insights, and planning views:
+1. 'landing' (Default View):
+   * Startup home with a lightweight particle field, cursor interactions, and entry points for planning, statements, and the workspace.
+2. 'dashboard':
+   * Executive Top Bar: Compact view navigation, contextual workspace tools, notifications, and currency selection.
    * Input Center: `SmartInput` (natural language text and Web Speech API voice capture with offline heuristic fallback).
    * Summary Cards: Total Income, Total Expense, Net Balance with monthly velocity trends.
    * Main 12-Column Responsive Grid:
      * Left (4 cols): `FinancialHealthWidget` & `BudgetProgress`.
      * Center (5 cols): `TransactionList` (with category filter chips, type toggle, CSV export, and clear search).
      * Right (3 cols): `SavingsGoals` & `RecurringManager`.
-2. `'reports'` (Analytics View):
+3. 'reports' (Analytics View):
    * Rendered via `Reports.tsx`. Contains Cash Flow KPI bar charts, Category spending pie charts, CSV export, and synchronous CSV import parser.
-3. `'ai'` (Aureus Intelligence View):
-   * Rendered via `AIIntelligencePage.tsx`. Features:
+4. 'ai' (Insights View):
+   * Rendered via AIIntelligencePage.tsx. Features:
      * **KPI Quick-Badge Strip:** Health Score, Archetype, Active Actions.
+5. 'plan' (Financial Plan View):
+   * Retirement assumptions, recurring SIP contributions, savings goals, and a clearly labeled illustrative projection.
      * **Categorized Sub-Tabs:** Filter between `All Engines`, `⚗️ What-If Alchemist`, `🧠 Behavioral & Health`, `🎯 10-Yr Life Architect`, `⚡ Momentum & Subscriptions`, and `🤖 Autonomous Tuner`.
      * **Aureus Alchemist:** Interactive budget simulator with real-time sliders and predictive impact calculation.
      * **Deep Analysis Engine:** Behavioral archetype classification and spending DNA profiling.

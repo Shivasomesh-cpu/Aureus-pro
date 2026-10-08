@@ -91,31 +91,28 @@ const FinancialPlanPage: React.FC<FinancialPlanPageProps> = ({ plan, goals, onSa
     setSaved(true);
   };
 
-  const fieldClass = 'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10';
-  const cardClass = 'rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6';
+  const fieldClass = 'mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10';
+  const cardClass = 'rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6';
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 animate-fade-in-up">
-      <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-8 text-white shadow-xl sm:px-9 sm:py-10">
-        <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-amber-400/15 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-300">Your money, on your terms</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Build your financial plan</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-300">Set the future you’re working toward. Add retirement assumptions and the monthly investments you already make; Aureus will show an illustration, not a promise.</p>
-          </div>
-          <button onClick={handleSave} className="shrink-0 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-300 focus:outline-none focus:ring-4 focus:ring-amber-200/30">
-            {saved ? 'Plan saved' : 'Save my plan'}
-          </button>
+      <section className="flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold tracking-wide text-slate-500">Your money, on your terms</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Build your financial plan</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Set the future you’re working toward. Add retirement assumptions and the monthly investments you already make; Aureus will show an illustration, not a promise.</p>
+          {validationMessage && <p className="mt-3 text-sm font-medium text-rose-700" role="alert">{validationMessage}</p>}
         </div>
-        {validationMessage && <p className="relative mt-4 text-sm font-semibold text-rose-200" role="alert">{validationMessage}</p>}
+        <button onClick={handleSave} className="shrink-0 rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
+          {saved ? 'Plan saved' : 'Save plan'}
+        </button>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
           <section className={cardClass}>
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><ArrowTrendingUpIcon className="h-5 w-5" /></div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><ArrowTrendingUpIcon className="h-5 w-5" /></div>
               <div><h2 className="text-lg font-bold text-slate-900">Retirement picture</h2><p className="mt-1 text-sm text-slate-500">Use your own estimates. You can update them any time.</p></div>
             </div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -129,7 +126,7 @@ const FinancialPlanPage: React.FC<FinancialPlanPageProps> = ({ plan, goals, onSa
           <section className={cardClass}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div><h2 className="text-lg font-bold text-slate-900">Monthly investments</h2><p className="mt-1 text-sm text-slate-500">Add SIPs or other regular contributions you want included.</p></div>
-              <button onClick={addInvestment} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs font-bold text-slate-700 transition hover:border-amber-300 hover:bg-amber-50"><PlusIcon className="h-4 w-4" />Add investment</button>
+              <button onClick={addInvestment} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"><PlusIcon className="h-4 w-4" />Add investment</button>
             </div>
             {draft.sipInvestments.length === 0 ? (
               <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-5 py-7 text-center">
@@ -153,10 +150,10 @@ const FinancialPlanPage: React.FC<FinancialPlanPageProps> = ({ plan, goals, onSa
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm sm:p-6">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-800">Illustrative retirement projection</p>
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6">
+            <p className="text-xs font-semibold text-slate-500">Illustrative retirement projection</p>
             {draft.currentAge === null || draft.retirementAge === null ? (
-              <div className="mt-5 rounded-xl bg-white/80 p-4 text-sm leading-6 text-slate-600">Add your current age and target retirement age to see a projection based on your monthly investments.</div>
+              <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Add your current age and target retirement age to see a projection based on your monthly investments.</div>
             ) : (
               <>
                 <p className="mt-4 text-3xl font-bold tracking-tight text-slate-950">{formatCurrency(projectedCorpus)}</p>
@@ -164,7 +161,7 @@ const FinancialPlanPage: React.FC<FinancialPlanPageProps> = ({ plan, goals, onSa
                 {estimatedTarget > 0 && <div className="mt-5"><div className="mb-2 flex justify-between text-xs font-semibold text-slate-600"><span>Illustrative target</span><span>{targetProgress.toFixed(0)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-amber-100"><div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${targetProgress}%` }} /></div><p className="mt-2 text-xs text-slate-500">Target: {formatCurrency(estimatedTarget)}</p></div>}
               </>
             )}
-            <div className="mt-5 border-t border-amber-200/70 pt-4 text-[11px] leading-5 text-slate-600">Illustration assumes monthly contributions, steady returns, and 3% annual inflation. The target uses 25× estimated annual income as a rough planning heuristic. Actual returns, taxes, and inflation vary; this is not financial advice.</div>
+            <div className="mt-5 border-t border-slate-100 pt-4 text-[11px] leading-5 text-slate-500">Illustration assumes monthly contributions, steady returns, and 3% annual inflation. The target uses 25× estimated annual income as a rough planning heuristic. Actual returns, taxes, and inflation vary; this is not financial advice.</div>
           </section>
 
           <section className={cardClass}>
@@ -173,8 +170,8 @@ const FinancialPlanPage: React.FC<FinancialPlanPageProps> = ({ plan, goals, onSa
             <button onClick={onManageGoals} className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50">{goals.length ? 'Manage my goals' : 'Add my first goal'}</button>
           </section>
 
-          <section className="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
-            <p className="text-sm font-bold">Monthly investing plan</p><p className="mt-1 text-xs text-slate-300">Across {draft.sipInvestments.length} investments</p><p className="mt-3 text-2xl font-bold">{formatCurrency(monthlyInvesting)}<span className="ml-1 text-xs font-medium text-slate-400">/ month</span></p>
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">Monthly investments</p><p className="mt-1 text-xs text-slate-500">Across {draft.sipInvestments.length} investments</p><p className="mt-3 text-2xl font-semibold text-slate-950">{formatCurrency(monthlyInvesting)}<span className="ml-1 text-xs font-medium text-slate-500">/ month</span></p>
           </section>
         </aside>
       </div>
