@@ -5,6 +5,7 @@ import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import ToastContainer from './components/ToastContainer';
 import Header from './components/Header';
+import LandingPage from './components/LandingPage';
 import SummaryCard from './components/SummaryCard';
 import TransactionList from './components/TransactionList';
 import TransactionForm from './components/TransactionForm';
@@ -65,7 +66,7 @@ const AppContent: React.FC = () => {
   const [isGoalsModalOpen, setIsGoalsModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'reports' | 'ai' | 'plan'>('dashboard');
+  const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'reports' | 'ai' | 'plan'>('landing');
   const [aiSelectedTab, setAiSelectedTab] = useState<string>('all');
 
   useEffect(() => {
@@ -586,6 +587,14 @@ const AppContent: React.FC = () => {
       <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary-500/[0.04] rounded-full blur-[150px] pointer-events-none z-0"></div>
 
       <div className="relative z-10">
+        {currentView === 'landing' ? (
+          <LandingPage
+            onLaunchApp={() => setCurrentView('dashboard')}
+            onOpenPlan={() => setCurrentView('plan')}
+            onOpenStatementUpload={() => setIsStatementModalOpen(true)}
+          />
+        ) : (
+          <>
           <Header
             currentView={currentView}
             onChangeView={setCurrentView}
@@ -736,6 +745,8 @@ const AppContent: React.FC = () => {
           >
             <PlusIcon className="w-7 h-7 group-hover:rotate-90 transition-transform duration-300" />
           </button>
+          </>
+        )}
       </div>
 
       <BankStatementUploader

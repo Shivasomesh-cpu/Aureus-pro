@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SearchIcon, CommandIcon, XMarkIcon, SparklesIcon, ChartBarIcon, ChartPieIcon, CreditCardIcon, PlusIcon } from './icons';
+import { SearchIcon, CommandIcon, XMarkIcon, SparklesIcon, ChartBarIcon, ChartPieIcon, CreditCardIcon, PlusIcon, GreekPillarIcon } from './icons';
 
 interface CommandItem {
   id: string;
@@ -13,7 +13,7 @@ interface CommandItem {
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
-  onChangeView: (view: 'dashboard' | 'reports' | 'ai' | 'plan') => void;
+  onChangeView: (view: 'landing' | 'dashboard' | 'reports' | 'ai' | 'plan') => void;
   onOpenNewTransaction: () => void;
   onOpenBudgets: () => void;
   onOpenDebts: () => void;
@@ -48,6 +48,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   }, [isOpen, onClose]);
 
   const commands: CommandItem[] = [
+    {
+      id: 'home',
+      title: 'Open Aureus home',
+      category: 'Navigation',
+      shortcut: 'G H',
+      icon: <GreekPillarIcon className="w-4 h-4 text-amber-300" />,
+      action: () => { onChangeView('landing'); onClose(); },
+    },
     {
       id: 'dash',
       title: 'Go to Financial Dashboard',

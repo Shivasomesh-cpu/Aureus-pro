@@ -6,8 +6,8 @@ import { Alert } from '../types';
 import { useLenis } from '../hooks/useLenis';
 
 interface HeaderProps {
-  currentView: 'dashboard' | 'reports' | 'ai' | 'plan';
-  onChangeView: (view: 'dashboard' | 'reports' | 'ai' | 'plan') => void;
+  currentView: 'landing' | 'dashboard' | 'reports' | 'ai' | 'plan';
+  onChangeView: (view: 'landing' | 'dashboard' | 'reports' | 'ai' | 'plan') => void;
   onManageBudgets: () => void;
   onManageDebts?: () => void;
   onOpenCommandPalette?: () => void;
@@ -63,10 +63,12 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex justify-between items-center h-16 md:h-20 gap-2">
 
           {/* Logo & Brand Identity */}
-          <div
-            onClick={() => onChangeView('dashboard')}
-            className="flex items-center gap-3 group cursor-pointer select-none flex-shrink-0"
-            title="Go to your dashboard"
+          <button
+            type="button"
+            onClick={() => onChangeView('landing')}
+            className="flex flex-shrink-0 select-none items-center gap-3 rounded-xl text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            title="Go to Aureus home"
+            aria-label="Go to Aureus home"
           >
             <div className="w-10 h-10 bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-400 rounded-xl flex items-center justify-center shadow-md shadow-amber-500/20 group-hover:scale-105 transition-all border border-amber-300/40">
               <GreekPillarIcon className="w-5 h-5 text-white" />
@@ -78,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({
               </div>
               <p className="text-[9px] text-amber-700 font-bold tracking-widest uppercase -mt-0.5">AI-Assisted Wealth</p>
             </div>
-          </div>
+          </button>
 
           {/* Central Executive View Tabs */}
           <nav className="flex items-center bg-slate-100/80 rounded-2xl p-1 border border-slate-200/60 shadow-xs">
